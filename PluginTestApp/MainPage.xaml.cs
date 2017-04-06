@@ -12,6 +12,7 @@ using Windows.UI.Xaml.Data;
 using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
+using System.Diagnostics;
 
 using WSAUnity;
 
@@ -26,6 +27,11 @@ namespace PluginTestApp
     {
         Plugin p;
 
+        SymplePlayer player;
+        SympleClient client;
+        string remotePeer;
+        bool initialized = false;
+
         public MainPage()
         {
             this.InitializeComponent();
@@ -33,8 +39,90 @@ namespace PluginTestApp
             p = new Plugin();
         }
 
+
+        private void startPlaybackAndRecording()
+        {
+            player.play();
+            player.engine.sendLocalSDP = (desc) =>
+            {
+                Debug.WriteLine("send offer: " + JSON.stringify(desc));
+                client.send({ to: remotePeer, type: "message", offer: desc });
+            };
+            player.engine.sendLocalCandidate = (cand) =>
+            {
+                client.send({ to: remotePeer, type: "message", candidate: cand });
+            };
+        }
+
+
+
         private void button_Click(object sender, RoutedEventArgs e)
         {
+
+            player = new SymplePlayer();
+
+            client = new SympleClient(CLIENT_OPTIONS);
+
+            client.on("announce", (peer) => {
+                Debug.WriteLine("Authentication success: " + peer);
+            });
+
+            client.on("addPeer", (peer) =>
+            {
+                Debug.WriteLine("adding peer: " + peer);
+
+                if (peer.user == "videorecorder" && !initialized)
+                {
+                    initialized = true;
+                    remotePeer = peer;
+                    startPlaybackAndRecording();
+                }
+            });
+
+            client.on("removePeer", (peer) =>
+            {
+                Debug.WriteLine("Removing peer: " + peer);
+            });
+
+            client.on("message", (m) =>
+            {
+                Debug.WriteLine("recv message: " + m);
+
+                if (remotePeer != null && remotePeer.id != m.from.id)
+                {
+                    Debug.WriteLine("Dropping message from unknown peer: " + m);
+                    return;
+                }
+                if (m.offer)
+                {
+                    Debug.WriteLine("Unexpected offer for one-way streaming");
+                } else if (m.answer)
+                {
+                    Debug.WriteLine("Receive answer: " + JSON.stringify(m.answer));
+                    player.engine.recvRemoteSDP(m.answer);
+                } else if (m.candidate)
+                {
+                    player.engine.recvRemoteCandidate(m.candidate);
+                }
+            });
+
+            client.on("disconnect", (peer) =>
+            {
+                Debug.WriteLine("Disconnected from server");
+            });
+
+            client.on("error", (error) =>
+            {
+                Debug.WriteLine("Connection error: " + error);
+            });
+
+            client.connect();
+
+
+
+
+
+
             string status = p.GetStatus();
 
             textBox.Text = status;

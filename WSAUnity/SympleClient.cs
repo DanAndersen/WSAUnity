@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace WSAUnity
 {
-    class SympleClient
+    public class SympleClient : SympleDispatcher
     {
         string _url;
         bool _secure;
@@ -27,5 +27,7 @@ namespace WSAUnity
 
 
         }
+
+        
     }
 }

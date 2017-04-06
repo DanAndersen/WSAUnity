@@ -10,15 +10,17 @@ using System.Threading.Tasks;
 
 namespace WSAUnity
 {
-    class SymplePlayer
+    public class SymplePlayer
     {
-        string _format;
-        string _engine;
+        string format;
+        string engine;
+
+        string state;
 
         public SymplePlayer()
         {
-            this._format = "MJPEG";
-            this._engine = "WebRTC";
+            this.format = "MJPEG";
+            this.engine = "WebRTC";
 
         }
 
@@ -36,6 +38,31 @@ namespace WSAUnity
             {
                 Debug.WriteLine("");
             }
+        }
+
+        public void setState(string state, string message = null)
+        {
+            Debug.WriteLine("symple:player: set state " + this.state + " => " + state);
+
+            if (state.Equals(this.state))
+            {
+                return;
+            }
+
+            this.state = state;
+            this.displayStatus(null);
+            this.playing = (state == "playing");
+            if (message != null)
+            {
+                this.displayMessage(state == "error" ? "error" : "info", message);
+            } else
+            {
+                this.displayMessage(null);
+            }
+
+            Debug.WriteLine("TODO: change any appearances in the UI based on state change");
+
+            this.options.onStateChange(this, state, message);
         }
     }
 }
