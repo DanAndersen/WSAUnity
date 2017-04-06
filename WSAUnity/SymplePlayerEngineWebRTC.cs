@@ -19,32 +19,30 @@ namespace WSAUnity
         private RTCPeerConnection pc;
         private MediaStream activeStream;
 
-        public override void init(SymplePlayer player)
+        private Media _media;
+
+        private RTCMediaStreamConstraints userMediaConstraints;
+
+        public SymplePlayerEngineWebRTC(SymplePlayer player) : base(player)
         {
             Debug.WriteLine("symple:webrtc: init");
-            base.init(player);
 
-            this.rtcConfig = player.options.rtcConfig || {
-                iceServers: [
-                    { url: "stun:stun.l.google.com:19302" }
-                ]
-            };
-
+            rtcConfig = player.options.rtcConfig || new RTCConfiguration() { IceServers = { new RTCIceServer() { Url = "stun:stun.l.google.com:19302" } } };
+            
+            /*
             this.rtcOptions = player.options.rtcOptions || {
                 optional: [
                     { DtlsSrtpKeyAgreement: true } // required for FF <=> Chrome interop
                 ]
             };
+            */
 
             // Specifies that this client will be the ICE initiator,
             // and will be sending the initial SDP Offer.
             this.initiator = player.options.initiator;
 
             // The `MediaStreamConstraints` object to pass to `getUserMedia`
-            this.userMediaConstraints = player.options.userMediaConstraints || {
-                audio: true, 
-                video: true
-            };
+            this.userMediaConstraints = player.options.userMediaConstraints ?? new RTCMediaStreamConstraints() { audioEnabled = true, videoEnabled = true };
 
             // Reference to the active local or remote media stream
             this.activeStream = null;
@@ -80,20 +78,64 @@ namespace WSAUnity
 
             if (this.pc != null)
             {
-                this.pc.close();
+                this.pc.Close();
                 this.pc = null;
                 // anything else needed for peer connection cleanup?
             }
         }
 
-        public override void play(var params) {
+        public override async void play(var parameters) {
+            Debug.WriteLine("symple:webrtc: play, " + parameters);
+
+            // if there is an active stream, play it now
+            if (this.activeStream != null)
+            {
+                this.video.src = buildURL.createObjectURL(this.activeStream);
+                this.video.play();
+                this.setState("playing");
+            } else
+            {
+                // otherwise, wait until ICE to complete before setting the playing state
+
+                // if we are the ICE initiator, then attempt to open the local video device and send the SDP offer to the peer
+                if (this.initiator)
+                {
+                    Debug.WriteLine("symple:webrtc: initiating " + this.userMediaConstraints);
+
+                    _media = Media.CreateMedia();
+                    
+                    MediaStream localStream = await _media.GetUserMedia(this.userMediaConstraints);
+
+                    // play the local video stream and create the SDP offer
+                    this.video.src = buildURL.createObjectURL(localStream);
+                    this.pc.AddStream(localStream);
+                    RTCSessionDescription desc = await this.pc.CreateOffer();
+
+                    Debug.WriteLine("symple:webrtc: offer: " + desc);
+                    this._onLocalSDP(desc);
+
+                    // store the active local stream
+                    this.activeStream = localStream;
+                }
+            }
+
             throw new NotImplementedException();
         }
 
-
+        // called when local SDP is ready to be sent to the peer
+        private async void _onLocalSDP(RTCSessionDescription desc) {
+            try
+            {
+                await this.pc.SetLocalDescription(desc);
+                this.sendLocalSDP(desc);
+            } catch (Exception e)
+            {
+                Debug.WriteLine("symple:webrtc: failed to send local SDP; " + e);
+            }
+        }
 
         // Called when local SDP is ready to be sent to the peer.
-        private Action<desc> sendLocalSDP = null; // new Function,
+        private Action<RTCSessionDescription> sendLocalSDP = null; // new Function,
 
         // Called when a local candidate is ready to be sent to the peer.
         private Action<RTCIceCandidate> sendLocalCandidate = null; // new Function,

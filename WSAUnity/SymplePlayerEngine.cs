@@ -16,7 +16,7 @@ namespace WSAUnity
         long prevTime;
         long delta;
 
-        public virtual void init(SymplePlayer player)
+        public SymplePlayerEngine(SymplePlayer player)
         {
             this.player = player;
             this.fps = 0;
@@ -26,7 +26,7 @@ namespace WSAUnity
         public abstract bool support();
         public abstract void setup();
         public abstract void destroy();
-        public virtual void play(var params)
+        public virtual async void play(var parameters)
         {
             throw new NotImplementedException();
         }

@@ -1,6 +1,7 @@
 ﻿{
   "dependencies": {
     "Microsoft.NETCore.UniversalWindowsPlatform": "5.1.0",
+    "SocketIOClientDotNet": "0.9.13",
     "WebRTC": "1.49.0"
   },
   "frameworks": {

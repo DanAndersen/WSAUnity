@@ -12,16 +12,31 @@ namespace WSAUnity
 {
     public class SymplePlayer
     {
-        string format;
-        string engine;
-
         string state;
 
-        public SymplePlayer()
-        {
-            this.format = "MJPEG";
-            this.engine = "WebRTC";
+        bool playing;
 
+        public SymplePlayerOptions options { get; }
+
+        public SymplePlayer(SymplePlayerOptions options)
+        {
+            this.options = options;
+            this.options.format = "MJPEG";
+            this.options.engine = null;
+            this.options.onCommand = (player, cmd) => { };
+            this.options.onStateChange = (player, state) => { };
+
+            if (this.options.engine == null)
+            {
+                var engine = SympleMediaPreferredCompatibleEngine(this.options.format);
+                if (engine != null)
+                {
+                    this.options.engine = engine.id;
+                }
+            }
+            
+            this.bindEvents();
+            this.playing = false;
         }
 
         private void onStateChange(string state)

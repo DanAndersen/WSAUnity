@@ -58,6 +58,11 @@ namespace PluginTestApp
 
         private void button_Click(object sender, RoutedEventArgs e)
         {
+            SympleClientOptions CLIENT_OPTIONS = new SympleClientOptions();
+            CLIENT_OPTIONS.secure = true;
+            CLIENT_OPTIONS.url = "https://andersed-talos.ddns.net:443";
+            CLIENT_OPTIONS.peer = new SymplePeer(){ user = "demo", name = "Demo User", group = "public"};
+
 
             player = new SymplePlayer();
 
