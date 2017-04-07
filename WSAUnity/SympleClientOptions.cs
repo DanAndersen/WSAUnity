@@ -11,6 +11,6 @@ namespace WSAUnity
         public string url;
         public bool secure;
         public object token;
-        public SymplePeer peer;
+        public Dictionary<string, object> peer;
     }
 }

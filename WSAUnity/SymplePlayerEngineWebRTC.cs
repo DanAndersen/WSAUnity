@@ -13,21 +13,39 @@ namespace WSAUnity
 {
     public class SymplePlayerEngineWebRTC : SymplePlayerEngine
     {
+#if NETFX_CORE
+        static SymplePlayerEngineWebRTC()
+        {
+            SympleMedia.instance.registerEngine(new SympleEngineOptions() { id = "WebRTC", name = "WebRTC Player", formats = "VP9, VP4, H.264, Opus", preference = 100, support = () => {
+                return true;
+            } });
+        }
+#endif
+
         bool initiator;
 
+#if NETFX_CORE
         private RTCConfiguration rtcConfig;
         private RTCPeerConnection pc;
         private MediaStream activeStream;
-
         private Media _media;
-
         private RTCMediaStreamConstraints userMediaConstraints;
+#endif
+
+        public override bool support()
+        {
+#if NETFX_CORE
+            return true;
+#else
+            return false;
+#endif
+        }
 
         public SymplePlayerEngineWebRTC(SymplePlayer player) : base(player)
         {
             Debug.WriteLine("symple:webrtc: init");
 
-            rtcConfig = player.options.rtcConfig || new RTCConfiguration() { IceServers = { new RTCIceServer() { Url = "stun:stun.l.google.com:19302" } } };
+            rtcConfig = player.options.rtcConfig ?? new RTCConfiguration() { IceServers = { new RTCIceServer() { Url = "stun:stun.l.google.com:19302" } } };
             
             /*
             this.rtcOptions = player.options.rtcOptions || {
@@ -54,11 +72,7 @@ namespace WSAUnity
 
             this._createPeerConnection();
 
-            if (this.video == null)
-            {
-                // TODO: add the "video element" to the document
-                throw new NotImplementedException();
-            }
+            Debug.WriteLine("====== here is where we could create the 'video' element and add it to the webpage ======");
         }
 
         public override void destroy()
@@ -69,12 +83,15 @@ namespace WSAUnity
             this.sendLocalCandidate = null;
             this.activeStream = null; // TODO: needs explicit close?
 
+            Debug.WriteLine("====== here is where we would destroy the video element ======");
+            /*
             if (this.video != null)
             {
-                this.video.src = '';
+                this.video.src = "";
                 this.video = null;
                 // anything else needed for video cleanup?
             }
+            */
 
             if (this.pc != null)
             {
@@ -84,14 +101,16 @@ namespace WSAUnity
             }
         }
 
-        public override async void play(var parameters) {
-            Debug.WriteLine("symple:webrtc: play, " + parameters);
+#if NETFX_CORE
+        public override async void play(Dictionary<string, object> parameters) {
+            Debug.WriteLine("symple:webrtc: play");
 
             // if there is an active stream, play it now
             if (this.activeStream != null)
             {
-                this.video.src = buildURL.createObjectURL(this.activeStream);
-                this.video.play();
+                Debug.WriteLine("====== here we would play the video element ======");
+                //this.video.src = URL.createObjectURL(this.activeStream);
+                //this.video.play();
                 this.setState("playing");
             } else
             {
@@ -107,7 +126,9 @@ namespace WSAUnity
                     MediaStream localStream = await _media.GetUserMedia(this.userMediaConstraints);
 
                     // play the local video stream and create the SDP offer
-                    this.video.src = buildURL.createObjectURL(localStream);
+
+                    Debug.WriteLine("====== this.video.src = URL.createObjectURL(localStream); ======");
+                    
                     this.pc.AddStream(localStream);
                     RTCSessionDescription desc = await this.pc.CreateOffer();
 
@@ -121,7 +142,7 @@ namespace WSAUnity
 
             throw new NotImplementedException();
         }
-
+        
         // called when local SDP is ready to be sent to the peer
         private async void _onLocalSDP(RTCSessionDescription desc) {
             try
@@ -132,6 +153,42 @@ namespace WSAUnity
             {
                 Debug.WriteLine("symple:webrtc: failed to send local SDP; " + e);
             }
+        }
+
+
+        // called when remote SDP is received from the peer
+        public async void recvRemoteSDP(Dictionary<string, object> desc)
+        {
+            Debug.WriteLine("symple:webrtc: recv remote sdp " + desc);
+            if (desc == null || !desc.ContainsKey("type") || !desc.ContainsKey("sdp"))
+            {
+                throw new Exception("invalid remote SDP");
+            }
+
+            try
+            {
+                RTCSdpType sdpType = new RTCSdpType(desc["type"]);
+                string sdp = (string)desc["sdp"];
+
+                await this.pc.SetRemoteDescription(new RTCSessionDescription(sdpType, sdp));
+                Debug.WriteLine("symple:webrtc: sdp success");
+            } catch (Exception e)
+            {
+                Debug.WriteLine("symple:webrtc: sdp error: " + e);
+                this.setError("cannot parse remote sdp offer");
+            }
+        }
+
+        // called when remote candidate is received from the peer
+        public async void recvRemoteCandidate(RTCIceCandidate candidate)
+        {
+            Debug.WriteLine("symple:webrtc: recv remote candidate " + candidate);
+            if (this.pc == null)
+            {
+                throw new Exception("the peer connection is not initialized"); // call recvRemoteSDP first
+            }
+
+            await this.pc.AddIceCandidate(candidate);
         }
 
         // Called when local SDP is ready to be sent to the peer.
@@ -147,7 +204,7 @@ namespace WSAUnity
                 throw new Exception("the peer connection is already initialized");
             }
 
-            Debug.WriteLine("symple:webrtc: create peer connection: " + this.rtcConfig + " " + this.rtcOptions);
+            Debug.WriteLine("symple:webrtc: create peer connection: " + this.rtcConfig); // NOTE: removed rtcOptions
 
             this.pc = new RTCPeerConnection(this.rtcConfig);
             pc.OnIceCandidate += (RTCPeerConnectionIceEvent iceEvent) =>
@@ -174,8 +231,9 @@ namespace WSAUnity
                 // This is the best we can do until ICE onstatechange is implemented.
                 this.setState("playing");
 
-                this.video.src = objectURL;
-                this.video.play();
+                Debug.WriteLine("====== here we would play the video element ======");
+                //this.video.src = objectURL;
+                //this.video.play();
 
                 // store the active stream
                 this.activeStream = mediaStreamEvent.Stream;
@@ -185,8 +243,9 @@ namespace WSAUnity
             {
                 Debug.WriteLine("symple:webrtc: remote stream removed: " + mediaStreamEvent);
 
-                this.video.stop();
-                this.video.src = "";
+                Debug.WriteLine("====== here we would stop the video element ======");
+                //this.video.stop();
+                //this.video.src = "";
             };
 
             // NOTE: The following state events are still very unreliable.
@@ -196,6 +255,38 @@ namespace WSAUnity
             // this.pc.onopen = function(event) { Symple.log('symple:webrtc: onopen:', event); };
             // this.pc.onicechange = function(event) { Symple.log('symple:webrtc: onicechange :', event); };
             // this.pc.onstatechange = function(event) { Symple.log('symple:webrtc: onstatechange :', event); };
+        }
+#endif
+
+        public override void stop()
+        {
+            // note: stopping the player does not close the connection.
+            // only "destroy" does that. this enables us to resume playback
+            // quickly and with minimal delay.
+
+            Debug.WriteLine("====== here we would stop the video element ======");
+            /*
+            if (this.video)
+            {
+                this.video.src = "";
+                // do not nullify
+            }
+            */
+
+            this.setState("stopped");
+        }
+
+        public override void mute(bool flag)
+        {
+            Debug.WriteLine("symple:webrtc: mute " + flag);
+
+            Debug.WriteLine("====== here we would mute the video element ======");
+            /*
+            if (this.video)
+            {
+                this.video.prop("muted", flag);
+            }
+            */
         }
     }
 }

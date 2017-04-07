@@ -20,6 +20,7 @@ namespace WSAUnity
         SympleClientOptions options;
 
         IO.Options ioOptions;
+        Dictionary<string, object> peer;
 
         public SympleClient(SympleClientOptions options) : base()
         {
@@ -27,12 +28,9 @@ namespace WSAUnity
             options.url = options.url ?? "http://localhost:4000";
             options.secure = (options.url != null && (options.url.IndexOf("https") == 0 || options.url.IndexOf("wss") == 0));
             options.token = null;
-            
-            // TODO: set up the "options"
-            throw new NotImplementedException();
 
-            this.peer = options.peer ?? { };
-            this.peer.rooms = options.peer.rooms ?? [];
+            this.peer = options.peer ?? new Dictionary<string, object>();
+            this.peer["rooms"] = options.peer["rooms"] ?? new List<object>();
             this.roster = new SympleRoster(this);
             this.socket = null;
 
@@ -57,22 +55,25 @@ namespace WSAUnity
                 Debug.WriteLine("ssymple:client: connected");
 
                 Dictionary<string, object> announceData = new Dictionary<string, object>();
-                announceData["user"] = options.user ?? "";
-                announceData["name"] = options.name ?? "";
-                announceData["type"] = options.type ?? "";
+                announceData["user"] = this.peer["user"] ?? "";
+                announceData["name"] = this.peer["name"] ?? "";
+                announceData["type"] = this.peer["type"] ?? "";
                 announceData["token"] = options.token ?? "";
 
                 string announceDataJsonString = JsonConvert.SerializeObject(announceData, Formatting.None);
 
-                this.socket.Emit("announce", (res) => {
-                    Debug.WriteLine("symple:client: announced " + res);
-                    if (res.status != 200)
+                this.socket.Emit("announce", (resObj) => {
+                    Debug.WriteLine("symple:client: announced " + resObj);
+
+                    Dictionary<string, object> res = (Dictionary<string, object>)resObj;
+
+                    if ((int)res["status"] != 200)
                     {
-                        this.setError("auth", res);
+                        this.setError("auth", (string)resObj);
                         return;
                     }
-                    this.peer = SympleExtend(this.peer, res.data);
-                    this.roster.add(res.data);
+                    this.peer = Symple.extend(this.peer, res["data"]);
+                    this.roster.add((Dictionary<string, object>)res["data"]);
                     this.sendPresence(probe: true);
                     this.dispatch("announce", res);
                     this.socket.On(Socket.EVENT_MESSAGE, (m) =>
@@ -115,7 +116,7 @@ namespace WSAUnity
             this.socket.On(Socket.EVENT_DISCONNECT, () =>
             {
                 Debug.WriteLine("symple:client: disconnect");
-                this.peer.online = false;
+                this.peer["online"] = false;
                 this.dispatch("disconnect");
             });
         }
@@ -135,31 +136,125 @@ namespace WSAUnity
             return this.peer.online;
         }
 
-        public void join(var room)
+        public void join(Dictionary<string, object> room)
         {
-            throw new NotImplementedException();
+            this.socket.Emit("join", room);
         }
 
-        public void leave(var room)
+        public void leave(Dictionary<string, object> room)
         {
-            throw new NotImplementedException();
+            this.socket.Emit("leave", room);
         }
 
-        public void send(var m, var to)
+        public void sendPresence(Dictionary<string, object> p)
         {
-            throw new NotImplementedException();
+            p = p ?? new Dictionary<string, object>();
+            if (p["data"] != null)
+            {
+                p["data"] = Symple.merge(this.peer, p["data"]);
+            } else
+            {
+                p["data"] = this.peer;
+            }
+            this.send(new SymplePresence(p));
         }
 
-        public void respond(var m)
+        // send a message to the given peer
+        // m = JSON object
+        // to = either a string or a JSON object to build an address from
+        public void send(Dictionary<string, object> m, object to)
         {
-            this.send(m, m.from);
+            if (!this.online())
+            {
+                throw new Exception("cannot send messages while offline"); // TODO: add to pending queue?
+            }
+
+            if (m.GetType() != typeof(Dictionary<string, object>))
+            {
+                throw new Exception("message must be an object");
+            }
+
+            if (m["type"].GetType() != typeof(string))
+            {
+                m["type"] = "message";
+            }
+
+            if (m["id"] == null)
+            {
+                m.id = SympleRandomString(8);
+            }
+
+            if (to != null)
+            {
+                m["to"] = to;
+            }
+
+            if (m["to"].GetType() == typeof(Dictionary<string, object>))
+            {
+                m["to"] = SympleBuildAddress(m["to"]);
+            }
+
+            if (m["to"] != null && m["to"].GetType() != typeof(string))
+            {
+                throw new Exception("message 'to' attribute must be an address string");
+            }
+
+            m["from"] = SympleBuildAddress(this.peer);
+
+            if (m["from"] == m["to"])
+            {
+                throw new Exception("message sender cannot match the recipient");
+            }
+
+            Debug.WriteLine("symple:client: sending" + m);
+
+            string messageJsonString = JsonConvert.SerializeObject(m, Formatting.None);
+
+            this.socket.Send(m);
         }
 
-        public void sendMessage(var m, var to)
+        public void respond(Dictionary<string, object> m)
+        {
+            this.send(m, m["from"]);
+        }
+
+        public void sendMessage(Dictionary<string, object> m, object to)
         {
             this.send(m, to);
         }
 
+        // sets the client to an error state and disconnects
+        public void setError(string error, string message = null)
+        {
+            Debug.WriteLine("symple:client: fatal error " + error + " " + message);
 
+            this.dispatch("error", error, message);
+            if (this.socket != null)
+            {
+                this.socket.Disconnect();
+            }
+        }
+
+        // extended dispatch function to handle filtered message response callbacks first, and then standard events
+        private void dispatch(string eventLabel, params object[] arguments)
+        {
+            if (!this.dispatchResponse(eventLabel, arguments))
+            {
+                base.dispatch(eventLabel, arguments);
+            }
+        }
+
+        // dispatch function for handling filtered message response callbacks
+        private bool dispatchResponse(string eventLabel, params object[] arguments)
+        {
+            if (this.listeners.ContainsKey(eventLabel))
+            {
+                List<Action<object>> listenersForEvent = listeners[eventLabel];
+                foreach (Action<object> listenerForEvent in listenersForEvent)
+                {
+                    asdf; // TODO: need to figure out the dispatcher listener logic here
+                }
+            }
+        }
     }
 }

@@ -6,10 +6,12 @@ using System.Threading.Tasks;
 
 namespace WSAUnity
 {
-    public class SymplePeer
+    public class SympleEngineOptions
     {
-        public string user;
+        public string id;
         public string name;
-        public string group;
+        public string formats;
+        public int preference;
+        public Func<bool> support;
     }
 }

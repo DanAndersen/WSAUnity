@@ -13,6 +13,7 @@ using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
 using System.Diagnostics;
+using Newtonsoft.Json;
 
 using WSAUnity;
 
@@ -29,7 +30,7 @@ namespace PluginTestApp
 
         SymplePlayer player;
         SympleClient client;
-        string remotePeer;
+        SymplePeer remotePeer;
         bool initialized = false;
 
         public MainPage()
@@ -46,11 +47,22 @@ namespace PluginTestApp
             player.engine.sendLocalSDP = (desc) =>
             {
                 Debug.WriteLine("send offer: " + JSON.stringify(desc));
-                client.send({ to: remotePeer, type: "message", offer: desc });
+
+                Dictionary<string, object> parameters = new Dictionary<string, object>();
+                parameters["to"] = remotePeer;
+                parameters["type"] = "message";
+                parameters["offer"] = desc;
+
+                client.send(parameters);
             };
             player.engine.sendLocalCandidate = (cand) =>
             {
-                client.send({ to: remotePeer, type: "message", candidate: cand });
+                Dictionary<string, object> parameters = new Dictionary<string, object>();
+                parameters["to"] = remotePeer;
+                parameters["type"] = "message";
+                parameters["candidate"] = cand;
+                
+                client.send(parameters);
             };
         }
 
@@ -64,7 +76,18 @@ namespace PluginTestApp
             CLIENT_OPTIONS.peer = new SymplePeer(){ user = "demo", name = "Demo User", group = "public"};
 
 
-            player = new SymplePlayer();
+            SymplePlayerOptions playerOptions = new SymplePlayerOptions();
+            playerOptions.engine = "WebRTC";
+            playerOptions.initiator = true;
+            playerOptions.rtcConfig = WEBRTC_CONFIG;
+            playerOptions.iceMediaConstraints = asdf;
+            playerOptions.onStateChange = (player, state, message) =>
+            {
+                player.displayStatus(state);
+            };
+
+
+            player = new SymplePlayer(playerOptions);
 
             client = new SympleClient(CLIENT_OPTIONS);
 
@@ -72,11 +95,13 @@ namespace PluginTestApp
                 Debug.WriteLine("Authentication success: " + peer);
             });
 
-            client.on("addPeer", (peer) =>
+            client.on("addPeer", (peerObj) =>
             {
+                Dictionary<string, object> peer = (Dictionary<string, object>)peerObj;
+
                 Debug.WriteLine("adding peer: " + peer);
 
-                if (peer.user == "videorecorder" && !initialized)
+                if ((string)peer["user"] == "videorecorder" && !initialized)
                 {
                     initialized = true;
                     remotePeer = peer;
@@ -89,25 +114,32 @@ namespace PluginTestApp
                 Debug.WriteLine("Removing peer: " + peer);
             });
 
-            client.on("message", (m) =>
+            client.on("message", (mObj) =>
             {
+                Dictionary<string, object> m = (Dictionary<string, object>)mObj;
+
                 Debug.WriteLine("recv message: " + m);
 
-                if (remotePeer != null && remotePeer.id != m.from.id)
+                Dictionary<string, object> from = (Dictionary<string, object>)m["from"];
+
+                if (remotePeer != null && remotePeer.id != from["id"])
                 {
                     Debug.WriteLine("Dropping message from unknown peer: " + m);
                     return;
                 }
-                if (m.offer)
+                if (m["offer"] != null)
                 {
                     Debug.WriteLine("Unexpected offer for one-way streaming");
-                } else if (m.answer)
+                } else if (m["answer"] != null)
                 {
-                    Debug.WriteLine("Receive answer: " + JSON.stringify(m.answer));
-                    player.engine.recvRemoteSDP(m.answer);
-                } else if (m.candidate)
+                    string answerJsonString = JsonConvert.SerializeObject(m["answer"], Formatting.None);
+
+                    Debug.WriteLine("Receive answer: " + answerJsonString);
+                    player.engine.recvRemoteSDP(m["answer"]);
+                } else if (m["candidate"] != null)
                 {
-                    player.engine.recvRemoteCandidate(m.candidate);
+                    SymplePlayerEngineWebRTC engine = (SymplePlayerEngineWebRTC)player.engine;
+                    engine.recvRemoteCandidate(m["candidate"]);
                 }
             });
 

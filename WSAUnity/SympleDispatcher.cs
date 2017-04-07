@@ -9,7 +9,7 @@ namespace WSAUnity
 {
     public class SympleDispatcher
     {
-        Dictionary<string, List<Action<object>>> listeners;
+        public Dictionary<string, List<Action<object>>> listeners { get; }
 
         public SympleDispatcher()
         {

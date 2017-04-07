@@ -18,13 +18,15 @@ namespace WSAUnity
 
         public SymplePlayerOptions options { get; }
 
+        public SymplePlayerEngine engine { get; private set; }
+
         public SymplePlayer(SymplePlayerOptions options)
         {
             this.options = options;
             this.options.format = "MJPEG";
             this.options.engine = null;
             this.options.onCommand = (player, cmd) => { };
-            this.options.onStateChange = (player, state) => { };
+            this.options.onStateChange = (player, state, message) => { };
 
             if (this.options.engine == null)
             {
@@ -44,7 +46,51 @@ namespace WSAUnity
             this.displayStatus(state);
         }
 
-        private void displayStatus(string data)
+        public void play(Dictionary<string,object> parameters)
+        {
+            Debug.WriteLine("symple:player: play, " + parameters);
+            try
+            {
+                if (this.engine == null)
+                {
+                    this.setup();
+                }
+
+                if (this.state != "playing")
+                {
+                    this.setState("loading");
+                    this.engine.play(parameters); // engine updates state to playing
+                }
+            } catch (Exception e)
+            {
+                this.setState("error");
+                this.displayMessage("error", e);
+                throw e;
+            }
+        }
+
+        private void mute(bool flag)
+        {
+            Debug.WriteLine("symple:player: mute " + flag);
+
+            if (this.engine != null)
+            {
+                this.engine.mute(flag);
+            }
+
+            // TODO: add anything about showing/hiding display based on mute state
+        }
+
+        private void setup()
+        {
+            // assume we are only doing WebRTC engine
+
+            // instantiate the engine
+            this.engine = new SymplePlayerEngineWebRTC(this);
+            this.engine.setup();
+        }
+
+        public void displayStatus(string data)
         {
             if (data != null)
             {
@@ -78,6 +124,11 @@ namespace WSAUnity
             Debug.WriteLine("TODO: change any appearances in the UI based on state change");
 
             this.options.onStateChange(this, state, message);
+        }
+
+        void displayMessage(string type = null, string message = null)
+        {
+            Debug.WriteLine("symple:player: display message " + type + " " + message);
         }
     }
 }

@@ -17,10 +17,10 @@ namespace WSAUnity
         }
 
         // add a peer object to the roster
-        public override void add(object peer)
+        public override void add(Dictionary<string, object> peer)
         {
             Debug.WriteLine("symple:roster: adding " + peer);
-            if (peer == null || peer.id == null || peer.user == null)
+            if (peer == null || !peer.ContainsKey("id") || !peer.ContainsKey("user"))
             {
                 throw new Exception("cannot add invalid peer");
             }
@@ -30,9 +30,11 @@ namespace WSAUnity
         }
 
         // remove the peer matching an ID or address string: user|id
-        public override object remove(string id)
+        public override Dictionary<string, object> remove(string id)
         {
-            id = SympleParseAddress(id).id ?? id;
+            var addr = Symple.parseAddress(id);
+
+            id = (string)addr["id"] ?? id;
             var peer = base.remove(id);
             Debug.WriteLine("symple:roster: removing " + id + ", " + peer);
             if (peer != null)
@@ -43,30 +45,30 @@ namespace WSAUnity
         }
 
         // get the peer matching an ID or address string: user|id
-        public override object get(string id)
+        public override Dictionary<string, object> get(string id)
         {
             // handle IDs
-            var peer = base.get(id);
+            Dictionary<string, object> peer = base.get(id);
             if (peer != null)
             {
                 return peer;
             }
 
             // handle address strings
-            return this.findOne(SympleParseAddress(id));
+            return this.findOne(Symple.parseAddress(id));
         }
 
-        public void update(var data)
+        public void update(Dictionary<string, object> data)
         {
-            if (data == null || data.id == null)
+            if (data == null || !data.ContainsKey("id"))
             {
                 return;
             }
 
-            var peer = this.get(data.id);
+            Dictionary<string, object> peer = this.get((string)data["id"]);
             if (peer != null)
             {
-                foreach (var key in data)
+                foreach (var key in data.Keys)
                 {
                     peer[key] = data[key];
                 }

@@ -8,27 +8,27 @@ namespace WSAUnity
 {
     public class SympleManager
     {
-        List<object> store;
+        List<Dictionary<string, object>> store;
         string key;
 
         public SympleManager(object options)
         {
-            this.options = options ?? {};
-            this.key = this.options.key ?? "id";
-            this.store = new List<object>();
+            // NOTE: removed all references to this.options and this.key since they appear to be unused
+            this.key = "id";
+            this.store = new List<Dictionary<string, object>>();
         }
 
-        public virtual void add(object value)
+        public virtual void add(Dictionary<string, object> value)
         {
             this.store.Add(value);
         }
 
-        public virtual object remove(string key)
+        public virtual Dictionary<string, object> remove(string key)
         {
-            object res = null;
+            Dictionary<string, object> res = null;
             for (int i = 0; i < this.store.Count; i++)
             {
-                if (this.store[i][this.key] == key)
+                if ((string)(this.store[i][this.key]) == key)
                 {
                     res = this.store[i];
                     this.store.RemoveAt(i);
@@ -38,11 +38,11 @@ namespace WSAUnity
             return res;
         }
 
-        public virtual object get(string key)
+        public virtual Dictionary<string, object> get(string key)
         {
             for (int i = 0; i < this.store.Count; i++)
             {
-                if (this.store[i][this.key] == key)
+                if ((string)(this.store[i][this.key]) == key)
                 {
                     return this.store[i];
                 }
@@ -50,12 +50,12 @@ namespace WSAUnity
             return null;
         }
 
-        public List<object> find(var parameters)
+        public List<Dictionary<string, object>> find(Dictionary<string, object> parameters)
         {
-            List<object> res = new List<object>();
+            List<Dictionary<string, object>> res = new List<Dictionary<string, object>>();
             for (int i = 0; i < this.store.Count; i++)
             {
-                if (SympleMatch(parameters, this.store[i]))
+                if (Symple.match(parameters, this.store[i]))
                 {
                     res.Add(this.store[i]);
                 }
@@ -63,13 +63,13 @@ namespace WSAUnity
             return res;
         }
 
-        public object findOne(var parameters)
+        public Dictionary<string, object> findOne(Dictionary<string, object> parameters)
         {
             var res = this.find(parameters);
             return (res.Count > 0) ? res[0] : null;
         }
 
-        public object last()
+        public Dictionary<string, object> last()
         {
             return this.store.Last();
         }
