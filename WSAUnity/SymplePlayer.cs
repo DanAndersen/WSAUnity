@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Diagnostics;
+using Newtonsoft.Json.Linq;
 
 #if NETFX_CORE
 using System.Threading.Tasks;
@@ -57,7 +58,7 @@ namespace WSAUnity
             this.displayStatus(state);
         }
 
-        public void play(Dictionary<string,object> parameters)
+        public void play(JObject parameters)
         {
             Debug.WriteLine("symple:player: play, " + parameters);
             try

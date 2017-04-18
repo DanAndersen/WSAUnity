@@ -14,6 +14,7 @@ using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
 using System.Diagnostics;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 using WSAUnity;
 
@@ -30,7 +31,7 @@ namespace PluginTestApp
 
         SymplePlayer player = null;
         SympleClient client = null;
-        Dictionary<string, object> remotePeer;
+        JObject remotePeer;
         bool initialized = false;
 
         public MainPage()
@@ -43,7 +44,8 @@ namespace PluginTestApp
 
         private void startPlaybackAndRecording()
         {
-            Dictionary<string, object> playParams = new Dictionary<string, object>();   // empty params
+            Debug.WriteLine("startPlaybackAndRecording");
+            JObject playParams = new JObject();   // empty params
 
             player.play(playParams);
 
@@ -52,19 +54,39 @@ namespace PluginTestApp
             {
                 Debug.WriteLine("send offer");
 
-                Dictionary<string, object> parameters = new Dictionary<string, object>();
+
+                JObject sessionDesc = new JObject();
+                sessionDesc["sdp"] = desc.Sdp;
+                if (desc.Type == Org.WebRtc.RTCSdpType.Answer)
+                {
+                    sessionDesc["type"] = "answer";
+                } else if (desc.Type == Org.WebRtc.RTCSdpType.Offer)
+                {
+                    sessionDesc["type"] = "offer";
+                } else if (desc.Type == Org.WebRtc.RTCSdpType.Pranswer)
+                {
+                    sessionDesc["type"] = "pranswer";
+                }
+                
+
+                JObject parameters = new JObject();
                 parameters["to"] = remotePeer;
                 parameters["type"] = "message";
-                parameters["offer"] = desc;
+                parameters["offer"] = sessionDesc;
 
                 client.send(parameters);
             };
             engine.sendLocalCandidate = (cand) =>
             {
-                Dictionary<string, object> parameters = new Dictionary<string, object>();
+                JObject candidateInit = new JObject();
+                candidateInit["candidate"] = cand.Candidate;
+                candidateInit["sdpMid"] = cand.SdpMid;
+                candidateInit["sdpMLineIndex"] = cand.SdpMLineIndex;
+
+                JObject parameters = new JObject();
                 parameters["to"] = remotePeer;
                 parameters["type"] = "message";
-                parameters["candidate"] = cand;
+                parameters["candidate"] = candidateInit;
                 
                 client.send(parameters);
             };
@@ -74,13 +96,13 @@ namespace PluginTestApp
 
         private void button_Click(object sender, RoutedEventArgs e)
         {
-            SympleClientOptions CLIENT_OPTIONS = new SympleClientOptions();
-            CLIENT_OPTIONS.secure = true;
-            CLIENT_OPTIONS.url = "https://andersed-talos.ddns.net:443";
-            CLIENT_OPTIONS.peer = new Dictionary<string, object>();
-            CLIENT_OPTIONS.peer["user"] = "demo";
-            CLIENT_OPTIONS.peer["name"] = "Demo User";
-            CLIENT_OPTIONS.peer["group"] = "public";
+            JObject CLIENT_OPTIONS = new JObject();
+            CLIENT_OPTIONS["secure"] = true;
+            CLIENT_OPTIONS["url"] = "https://andersed-talos.ddns.net:443";
+            CLIENT_OPTIONS["peer"] = new JObject();
+            CLIENT_OPTIONS["peer"]["user"] = "demo";
+            CLIENT_OPTIONS["peer"]["name"] = "Demo User";
+            CLIENT_OPTIONS["peer"]["group"] = "public";
 
             SymplePlayerOptions playerOptions = new SymplePlayerOptions();
             playerOptions.engine = "WebRTC";
@@ -115,7 +137,7 @@ namespace PluginTestApp
 
             client.on("addPeer", (peerObj) =>
             {
-                Dictionary<string, object> peer = (Dictionary<string, object>)peerObj;
+                JObject peer = (JObject)peerObj;
 
                 Debug.WriteLine("adding peer: " + peer);
 
@@ -134,11 +156,11 @@ namespace PluginTestApp
 
             client.on("message", (mObj) =>
             {
-                Dictionary<string, object> m = (Dictionary<string, object>)mObj;
+                JObject m = (JObject)mObj;
 
                 Debug.WriteLine("recv message: " + m);
 
-                Dictionary<string, object> from = (Dictionary<string, object>)m["from"];
+                JObject from = (JObject)m["from"];
 
                 if (remotePeer != null && remotePeer["id"] != from["id"])
                 {
@@ -154,7 +176,7 @@ namespace PluginTestApp
 
                     string answerJsonString = JsonConvert.SerializeObject(m["answer"], Formatting.None);
 
-                    Dictionary<string, object> answerParams = (Dictionary<string, object>)m["answer"];
+                    JObject answerParams = (JObject)m["answer"];
 
                     Debug.WriteLine("Receive answer: " + answerJsonString);
                     engine.recvRemoteSDP(answerParams);
@@ -162,7 +184,7 @@ namespace PluginTestApp
                 {
                     SymplePlayerEngineWebRTC engine = (SymplePlayerEngineWebRTC)player.engine;
 
-                    Dictionary<string, object> candidateParams = (Dictionary <string, object>) m["candidate"];
+                    JObject candidateParams = (JObject) m["candidate"];
 
                     engine.recvRemoteCandidate(candidateParams);
                 }

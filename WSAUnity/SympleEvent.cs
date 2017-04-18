@@ -7,20 +7,16 @@ using Newtonsoft.Json.Linq;
 
 namespace WSAUnity
 {
-    public class SympleCommand : JObject
+    public class SympleEvent : JObject
     {
-        public SympleCommand(JObject json): base()
-        {
-            this.fromJSON(json);
-            this["type"] = "command";
-        }
-        
-        private void fromJSON(JObject json)
+        public SympleEvent(JObject json)
         {
             foreach (var prop in json.Properties())
             {
                 this[prop.Name] = json[prop.Name];
             }
+
+            this["type"] = "event";
         }
     }
 }

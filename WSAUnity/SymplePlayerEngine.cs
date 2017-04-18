@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using Newtonsoft.Json.Linq;
 
 namespace WSAUnity
 {
@@ -26,15 +27,16 @@ namespace WSAUnity
         public abstract bool support();
         public abstract void setup();
         public abstract void destroy();
-        public void play(Dictionary<string, object> parameters)
+        public void play(JObject parameters)
         {
+            Debug.WriteLine("symple:player:engine: play");
 #if NETFX_CORE
-            this._play(parameters);
+            _play(parameters);
 #endif
         }
 
 #if NETFX_CORE
-        public virtual async void _play(Dictionary<string, object> parameters) { }
+        public virtual async void _play(JObject parameters) { }
 #endif
 
         public abstract void stop();

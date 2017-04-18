@@ -107,6 +107,7 @@
     <None Include="project.json" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="JObjectWithActions.cs" />
     <Compile Include="Plugin.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Symple.cs" />
@@ -114,13 +115,15 @@
     <Compile Include="SympleCommand.cs" />
     <Compile Include="SympleDispatcher.cs" />
     <Compile Include="SympleEngineOptions.cs" />
+    <Compile Include="SympleEvent.cs" />
     <Compile Include="SympleManager.cs" />
-    <Compile Include="SympleClientOptions.cs" />
     <Compile Include="SympleMedia.cs" />
+    <Compile Include="SympleMessage.cs" />
     <Compile Include="SymplePlayer.cs" />
     <Compile Include="SymplePlayerEngine.cs" />
     <Compile Include="SymplePlayerEngineWebRTC.cs" />
     <Compile Include="SymplePlayerOptions.cs" />
+    <Compile Include="SymplePresence.cs" />
     <Compile Include="SympleRoster.cs" />
     <EmbeddedResource Include="Properties\WSAUnity.rd.xml" />
   </ItemGroup>

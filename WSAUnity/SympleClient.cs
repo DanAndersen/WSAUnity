@@ -5,6 +5,7 @@ using System.Text;
 using System.Diagnostics;
 using Quobject.SocketIoClientDotNet.Client;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 #if NETFX_CORE
 using System.Threading.Tasks;
@@ -17,30 +18,34 @@ namespace WSAUnity
         private Socket socket;
         SympleRoster roster;
 
-        SympleClientOptions options;
+        JObject options;
 
         IO.Options ioOptions;
-        Dictionary<string, object> peer;
+        JObject peer;
 
-        public SympleClient(SympleClientOptions options) : base()
+        public SympleClient(JObject options) : base()
         {
             this.options = options;
-            options.url = options.url ?? "http://localhost:4000";
-            options.secure = (options.url != null && (options.url.IndexOf("https") == 0 || options.url.IndexOf("wss") == 0));
-            options.token = null;
+            options["url"] = options["url"] ?? "http://localhost:4000";
+            options["secure"] = (options["url"] != null && (options["url"].ToString().IndexOf("https") == 0 || options["url"].ToString().IndexOf("wss") == 0));
+            options["token"] = null;
 
-            this.peer = options.peer ?? new Dictionary<string, object>();
-            this.peer["rooms"] = options.peer.ContainsKey("rooms") ? options.peer["rooms"] : new List<object>();
+            this.peer = options["peer"] as JObject ?? new JObject();
+            this.peer["rooms"] = options["peer"]["rooms"] ?? new JArray();
             this.roster = new SympleRoster(this);
             this.socket = null;
 
-            Uri socketUri = new Uri(options.url);
+            Uri socketUri = new Uri(options["url"].ToString());
 
             ioOptions = new IO.Options();
-            ioOptions.Secure = options.secure;
+            ioOptions.Secure = (bool) options["secure"];
             ioOptions.Port = socketUri.Port;
             ioOptions.Hostname = socketUri.Host;
             ioOptions.IgnoreServerCertificateValidation = true;
+
+
+            Debug.WriteLine("done initing SympleClient, values: ");
+            Debug.WriteLine("this.peer: " + this.peer.ToString());
         }
 
         public void connect()
@@ -52,48 +57,106 @@ namespace WSAUnity
                 throw new Exception("the client socket is not null");
             }
 
-            this.socket = IO.Socket(this.options.url, this.ioOptions);
+            this.socket = IO.Socket(this.options["url"].ToString(), this.ioOptions);
             this.socket.On(Socket.EVENT_CONNECT, () => {
                 Debug.WriteLine("ssymple:client: connected");
 
-                Dictionary<string, object> announceData = new Dictionary<string, object>();
+                JObject announceData = new JObject();
                 announceData["user"] = this.peer["user"] ?? "";
                 announceData["name"] = this.peer["name"] ?? "";
                 announceData["type"] = this.peer["type"] ?? "";
-                announceData["token"] = options.token ?? "";
+                announceData["token"] = options["token"] ?? "";
 
                 string announceDataJsonString = JsonConvert.SerializeObject(announceData, Formatting.None);
+                Debug.WriteLine("announceDataJsonString: " + announceDataJsonString);
 
                 this.socket.Emit("announce", (resObj) => {
                     Debug.WriteLine("symple:client: announced " + resObj);
 
-                    Dictionary<string, object> res = (Dictionary<string, object>)resObj;
+                    JObject res = (JObject) resObj;
 
                     if ((int)res["status"] != 200)
                     {
-                        this.setError("auth", (string)resObj);
+                        this.setError("auth", resObj.ToString());
                         return;
                     }
 
-                    Dictionary<string, object> resData = (Dictionary < string, object> ) res["data"];
+                    JObject resData = (JObject) res["data"];
 
                     this.peer = Symple.extend(this.peer, resData);
                     this.roster.add(resData);
 
-                    Dictionary<string, object> sendPresenceParams = new Dictionary<string, object>();
+                    JObject sendPresenceParams = new JObject();
                     sendPresenceParams["probe"] = true;
 
                     this.sendPresence(sendPresenceParams);
                     this.dispatch("announce", res);
-                    this.socket.On(Socket.EVENT_MESSAGE, (m) =>
+                    this.socket.On(Socket.EVENT_MESSAGE, (msg) =>
                     {
-                        Debug.WriteLine("symple:client receive " + m);
+                        Debug.WriteLine("symple:client receive " + msg);
 
-                        throw new NotImplementedException();
+                        JObject m = (JObject)msg;
+
+                        string mType = (string)m["type"];
+
+                        switch (mType)
+                        {
+                            case "message":
+                                m = new SympleMessage(m);
+                                break;
+                            case "command":
+                                m = new SympleCommand(m);
+                                break;
+                            case "event":
+                                m = new SympleEvent(m);
+                                break;
+                            case "presence":
+                                m = new SymplePresence(m);
+                                if ((bool)m["data"]["online"])
+                                {
+                                    this.roster.update((JObject)m["data"]);
+                                } else
+                                {
+                                    this.roster.remove((string)m["data"]["id"]);
+                                }
+
+                                if ((bool)m["probe"])
+                                {
+                                    JObject presenceTo = new JObject();
+                                    presenceTo["to"] = Symple.parseAddress(m["from"].ToString())["id"];
+
+                                    this.sendPresence(new SymplePresence(presenceTo));
+                                }
+                                break;
+                            default:
+                                var o = m;
+                                o["type"] = o["type"] ?? "message";
+                                break;
+                        }
+
+                        if (m["from"].Type != JTokenType.String)
+                        {
+                            Debug.WriteLine("symple:client: invalid sender address: " + m);
+                            return;
+                        }
+
+                        // replace the from attribute with the full peer object.
+                        // this will only work for peer messages, not server messages.
+                        var rpeer = this.roster.get((string)m["from"]);
+                        if (rpeer != null)
+                        {
+                            m["from"] = rpeer;
+                        } else
+                        {
+                            Debug.WriteLine("symple:client: got message from unknown peer: " + m);
+                        }
+
+                        // Dispatch to the application
+                        this.dispatch((string)m["type"], m);
                     });
 
 
-                },  announceDataJsonString);
+                }, announceData);
             });
 
             this.socket.On(Socket.EVENT_ERROR, () =>
@@ -145,46 +208,46 @@ namespace WSAUnity
             return (bool) this.peer["online"];
         }
 
-        public void join(Dictionary<string, object> room)
+        public void join(JObject room)
         {
             this.socket.Emit("join", room);
         }
 
-        public void leave(Dictionary<string, object> room)
+        public void leave(JObject room)
         {
             this.socket.Emit("leave", room);
         }
 
-        public void sendPresence(Dictionary<string, object> p)
+        public void sendPresence(JObject p)
         {
-            p = p ?? new Dictionary<string, object>();
+            p = p ?? new JObject();
             if (p["data"] != null)
             {
-                Dictionary<string, object> pDataObj = (Dictionary<string, object>)p["data"];
+                JObject pDataObj = (JObject)p["data"];
                 p["data"] = Symple.merge(this.peer, pDataObj);
             } else
             {
                 p["data"] = this.peer;
             }
-            this.send(Symple.initPresence(p));
+            this.send(new SymplePresence(p));
         }
 
         // send a message to the given peer
         // m = JSON object
         // to = either a string or a JSON object to build an address from
-        public void send(Dictionary<string, object> m, object to = null)
+        public void send(JObject m, JToken to = null)
         {
             if (!this.online())
             {
                 throw new Exception("cannot send messages while offline"); // TODO: add to pending queue?
             }
-
-            if (m.GetType() != typeof(Dictionary<string, object>))
+            
+            if (m.Type != JTokenType.Object)
             {
                 throw new Exception("message must be an object");
             }
 
-            if (m["type"].GetType() != typeof(string))
+            if (m["type"].Type != JTokenType.String)
             {
                 m["type"] = "message";
             }
@@ -199,13 +262,13 @@ namespace WSAUnity
                 m["to"] = to;
             }
 
-            if (m["to"].GetType() == typeof(Dictionary<string, object>))
+            if (m["to"] != null && m["to"].Type == JTokenType.Object)
             {
-                Dictionary<string, object> mToObj = (Dictionary<string, object>)m["to"];
+                JObject mToObj = (JObject)m["to"];
                 m["to"] = Symple.buildAddress(mToObj);
             }
 
-            if (m["to"] != null && m["to"].GetType() != typeof(string))
+            if (m["to"] != null && m["to"].Type != JTokenType.String)
             {
                 throw new Exception("message 'to' attribute must be an address string");
             }
@@ -224,12 +287,12 @@ namespace WSAUnity
             this.socket.Send(m);
         }
 
-        public void respond(Dictionary<string, object> m)
+        public void respond(JObject m)
         {
             this.send(m, m["from"]);
         }
 
-        public void sendMessage(Dictionary<string, object> m, object to)
+        public void sendMessage(JObject m, JToken to)
         {
             this.send(m, to);
         }
@@ -255,7 +318,7 @@ namespace WSAUnity
             }
         }
 
-        private void sendCommand(Dictionary<string, object> c, object to, Action<object> fn, bool once)
+        private void sendCommand(JObject c, object to, Action<object> fn, bool once)
         {
             //c = new SympleCommand(c, to);
             c = new SympleCommand(c); // NOTE: removed "to" since I don't know what to do with it
@@ -263,12 +326,12 @@ namespace WSAUnity
 
             if (fn != null)
             {
-                Dictionary<string, object> filters = new Dictionary<string, object>();
+                JObject filters = new JObject();
                 filters["id"] = c["id"];
 
                 Action<object> after = (res) =>
                 {
-                    Dictionary<string, object> resObj = (Dictionary<string, object>)res;
+                    JObject resObj = (JObject)res;
                     int status = (int)resObj["status"];
 
                     if (once || (
@@ -284,7 +347,7 @@ namespace WSAUnity
             }
         }
 
-        private void onResponse(string eventLabel, Dictionary<string, object> filters, Action<object> fn, Action<object> after) {
+        private void onResponse(string eventLabel, JObject filters, Action<object> fn, Action<object> after) {
             if (!this.listeners.ContainsKey(eventLabel))
             {
                 this.listeners[eventLabel] = new List<object>();
@@ -292,9 +355,9 @@ namespace WSAUnity
 
             if (fn != null)
             {
-                Dictionary<string, object> listener = new Dictionary<string, object>();
-                listener["fn"] = fn;
-                listener["after"] = after;
+                JObjectWithActions listener = new JObjectWithActions();
+                listener.actions["fn"] = fn;
+                listener.actions["after"] = after;
                 listener["filters"] = filters;
 
                 this.listeners[eventLabel].Add(listener);
@@ -311,21 +374,21 @@ namespace WSAUnity
                 List<object> listenersForEvent = listeners[eventLabel];
                 foreach (object listenerForEvent in listenersForEvent)
                 {
-                    if (listenerForEvent.GetType() == typeof(Dictionary<string, object>))
+                    if (listenerForEvent.GetType() == typeof(JObjectWithActions))
                     {
-                        Dictionary<string, object> listenerObj = (Dictionary<string, object>)listenerForEvent;
+                        JObjectWithActions listenerObj = (JObjectWithActions)listenerForEvent;
                         if (listenerObj["filters"] != null)
                         {
                             {
-                                Dictionary<string, object> filtersObj = (Dictionary<string, object>)listenerObj["filters"];
-                                Dictionary<string, object> dataObj = (Dictionary<string, object>)data[0];
+                                JObject filtersObj = (JObject)listenerObj["filters"];
+                                JObject dataObj = (JObject)data[0];
                                 if (Symple.match(filtersObj, dataObj))
                                 {
-                                    Action<object> fn = (Action<object>)listenerObj["fn"];
+                                    Action<object> fn = listenerObj.actions["fn"];
                                     fn(data);
                                     if (listenerObj["after"] != null)
                                     {
-                                        Action<object> after = (Action<object>)listenerObj["after"];
+                                        Action<object> after = listenerObj.actions["after"];
                                         after(data);
                                     }
                                     return true;

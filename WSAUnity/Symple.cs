@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 
 namespace WSAUnity
 {
     static class Symple
     {
-        public static string buildAddress(Dictionary<string, object> peer)
+        public static string buildAddress(JObject peer)
         {
             return (peer["user"] != null ? (peer["user"] + "|") : "") + (peer["id"] != null ? peer["id"] : "");
         }
@@ -24,31 +25,20 @@ namespace WSAUnity
               .Select(s => s[random.Next(s.Length)]).ToArray());
         }
 
-        public static Dictionary<string, object> initPresence(Dictionary<string, object> json)
-        {
-            Dictionary<string, object> presence = new Dictionary<string, object>();
-            foreach (var key in json.Keys)
-            {
-                presence[key] = json[key];
-            }
-
-            presence["type"] = "presence";
-
-            return presence;
-        }
-
         // recursively merge object properties of r into l
-        public static Dictionary<string, object> merge(Dictionary<string, object> l, Dictionary<string, object> r)
+        public static JObject merge(JObject l, JObject r)
         {
-            foreach (string p in r.Keys)
+            foreach (var prop in r.Properties())
             {
+                string p = prop.Name;
+
                 try
                 {
                     // property in destination object set; update its value.
-                    if (r[p].GetType() == typeof(Dictionary<string, object>))
+                    if (r[p].Type == JTokenType.Object)
                     {
-                        Dictionary<string, object> lpObj = (Dictionary<string, object>)l[p];
-                        Dictionary<string, object> rpObj = (Dictionary<string, object>)r[p];
+                        JObject lpObj = (JObject)l[p];
+                        JObject rpObj = (JObject)r[p];
                         l[p] = merge(lpObj, rpObj);
                     } else
                     {
@@ -64,9 +54,9 @@ namespace WSAUnity
             return l;
         }
 
-        public static Dictionary<string, object> parseAddress(string str)
+        public static JObject parseAddress(string str)
         {
-            Dictionary<string, object> addr = new Dictionary<string, object>();
+            JObject addr = new JObject();
 
             string[] arr = str.Split('|');
 
@@ -86,12 +76,14 @@ namespace WSAUnity
         }
 
         // match object properties of l with r
-        public static bool match (Dictionary<string, object> l, Dictionary<string, object> r)
+        public static bool match (JObject l, JObject r)
         {
             bool res = true;
-            foreach (var prop in l.Keys)
+            foreach (var prop in l.Properties())
             {
-                if (!l.ContainsKey(prop) || !r.ContainsKey(prop) || r[prop] != l[prop])
+                string p = prop.Name;
+
+                if (l[p] == null || r[p] == null || r[p] != l[p])
                 {
                     res = false;
                     break;
@@ -100,12 +92,12 @@ namespace WSAUnity
             return res;
         }
 
-        public static Dictionary<string, object> extend(Dictionary<string, object> destination, Dictionary<string, object> source)
+        public static JObject extend(JObject destination, JObject source)
         {
             var result = destination;
-            foreach (var sourceKey in source.Keys)
+            foreach (var sourceProperty in source.Properties())
             {
-                destination[sourceKey] = source[sourceKey];
+                destination[sourceProperty.Name] = source[sourceProperty.Name];
             }
             return result;
         }

@@ -3,29 +3,30 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 
 namespace WSAUnity
 {
     public class SympleManager
     {
-        List<Dictionary<string, object>> store;
+        List<JObject> store;
         string key;
 
         public SympleManager()
         {
             // NOTE: removed all references to this.options and this.key since they appear to be unused
             this.key = "id";
-            this.store = new List<Dictionary<string, object>>();
+            this.store = new List<JObject>();
         }
 
-        public virtual void add(Dictionary<string, object> value)
+        public virtual void add(JObject value)
         {
             this.store.Add(value);
         }
 
-        public virtual Dictionary<string, object> remove(string key)
+        public virtual JObject remove(string key)
         {
-            Dictionary<string, object> res = null;
+            JObject res = null;
             for (int i = 0; i < this.store.Count; i++)
             {
                 if ((string)(this.store[i][this.key]) == key)
@@ -38,7 +39,7 @@ namespace WSAUnity
             return res;
         }
 
-        public virtual Dictionary<string, object> get(string key)
+        public virtual JObject get(string key)
         {
             for (int i = 0; i < this.store.Count; i++)
             {
@@ -50,9 +51,9 @@ namespace WSAUnity
             return null;
         }
 
-        public List<Dictionary<string, object>> find(Dictionary<string, object> parameters)
+        public List<JObject> find(JObject parameters)
         {
-            List<Dictionary<string, object>> res = new List<Dictionary<string, object>>();
+            List<JObject> res = new List<JObject>();
             for (int i = 0; i < this.store.Count; i++)
             {
                 if (Symple.match(parameters, this.store[i]))
@@ -63,13 +64,13 @@ namespace WSAUnity
             return res;
         }
 
-        public Dictionary<string, object> findOne(Dictionary<string, object> parameters)
+        public JObject findOne(JObject parameters)
         {
             var res = this.find(parameters);
             return (res.Count > 0) ? res[0] : null;
         }
 
-        public Dictionary<string, object> last()
+        public JObject last()
         {
             return this.store.Last();
         }

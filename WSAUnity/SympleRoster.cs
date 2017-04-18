@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using Newtonsoft.Json.Linq;
 
 namespace WSAUnity
 {
@@ -17,10 +18,10 @@ namespace WSAUnity
         }
 
         // add a peer object to the roster
-        public override void add(Dictionary<string, object> peer)
+        public override void add(JObject peer)
         {
             Debug.WriteLine("symple:roster: adding " + peer);
-            if (peer == null || !peer.ContainsKey("id") || !peer.ContainsKey("user"))
+            if (peer == null || peer["id"] == null || peer["user"] == null)
             {
                 throw new Exception("cannot add invalid peer");
             }
@@ -30,7 +31,7 @@ namespace WSAUnity
         }
 
         // remove the peer matching an ID or address string: user|id
-        public override Dictionary<string, object> remove(string id)
+        public override JObject remove(string id)
         {
             var addr = Symple.parseAddress(id);
 
@@ -45,10 +46,10 @@ namespace WSAUnity
         }
 
         // get the peer matching an ID or address string: user|id
-        public override Dictionary<string, object> get(string id)
+        public override JObject get(string id)
         {
             // handle IDs
-            Dictionary<string, object> peer = base.get(id);
+            JObject peer = base.get(id);
             if (peer != null)
             {
                 return peer;
@@ -58,19 +59,19 @@ namespace WSAUnity
             return this.findOne(Symple.parseAddress(id));
         }
 
-        public void update(Dictionary<string, object> data)
+        public void update(JObject data)
         {
-            if (data == null || !data.ContainsKey("id"))
+            if (data == null || data["id"] == null)
             {
                 return;
             }
 
-            Dictionary<string, object> peer = this.get((string)data["id"]);
+            JObject peer = this.get((string)data["id"]);
             if (peer != null)
             {
-                foreach (var key in data.Keys)
+                foreach (var prop in data.Properties())
                 {
-                    peer[key] = data[key];
+                    peer[prop.Name] = data[prop.Name];
                 }
             } else
             {

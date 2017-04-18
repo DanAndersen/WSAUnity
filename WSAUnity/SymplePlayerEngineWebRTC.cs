@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Diagnostics;
+using Newtonsoft.Json.Linq;
 
 #if NETFX_CORE
 using System.Threading.Tasks;
@@ -67,7 +68,9 @@ namespace WSAUnity
             Debug.WriteLine("symple:webrtc: setup");
 
 #if NETFX_CORE
+            Debug.WriteLine("before _createPeerConnection");
             this._createPeerConnection();
+            Debug.WriteLine("after _createPeerConnection");
 #endif
 
             Debug.WriteLine("====== here is where we could create the 'video' element and add it to the webpage ======");
@@ -104,8 +107,8 @@ namespace WSAUnity
         }
 
 #if NETFX_CORE
-        public override async void _play(Dictionary<string, object> parameters) {
-            Debug.WriteLine("symple:webrtc: play");
+        public override async void _play(JObject parameters) {
+            Debug.WriteLine("symple:webrtc: _play");
 
             // if there is an active stream, play it now
             if (this.activeStream != null)
@@ -159,10 +162,10 @@ namespace WSAUnity
 
 
         // called when remote SDP is received from the peer
-        public async void recvRemoteSDP(Dictionary<string, object> desc)
+        public async void recvRemoteSDP(JObject desc)
         {
             Debug.WriteLine("symple:webrtc: recv remote sdp " + desc);
-            if (desc == null || !desc.ContainsKey("type") || !desc.ContainsKey("sdp"))
+            if (desc == null || desc["type"] == null || desc["sdp"] == null)
             {
                 throw new Exception("invalid remote SDP");
             }
@@ -199,7 +202,7 @@ namespace WSAUnity
         }
 
         // called when remote candidate is received from the peer
-        public async void recvRemoteCandidate(Dictionary<string, object> candidateParams)
+        public async void recvRemoteCandidate(JObject candidateParams)
         {
             Debug.WriteLine("symple:webrtc: recv remote candidate " + candidateParams);
             if (this.pc == null)
@@ -230,6 +233,7 @@ namespace WSAUnity
             Debug.WriteLine("symple:webrtc: create peer connection: " + this.rtcConfig); // NOTE: removed rtcOptions
 
             this.pc = new RTCPeerConnection(this.rtcConfig);
+            Debug.WriteLine("symple:webrtc: created this.pc");
             pc.OnIceCandidate += (RTCPeerConnectionIceEvent iceEvent) =>
             {
                 if (iceEvent.Candidate != null)

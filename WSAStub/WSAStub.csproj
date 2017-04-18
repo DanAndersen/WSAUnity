@@ -58,6 +58,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\WSAUnity\JObjectWithActions.cs">
+      <Link>JObjectWithActions.cs</Link>
+    </Compile>
     <Compile Include="..\WSAUnity\Plugin.cs">
       <Link>Plugin.cs</Link>
     </Compile>
@@ -79,11 +82,17 @@
     <Compile Include="..\WSAUnity\SympleEngineOptions.cs">
       <Link>SympleEngineOptions.cs</Link>
     </Compile>
+    <Compile Include="..\WSAUnity\SympleEvent.cs">
+      <Link>SympleEvent.cs</Link>
+    </Compile>
     <Compile Include="..\WSAUnity\SympleManager.cs">
       <Link>SympleManager.cs</Link>
     </Compile>
     <Compile Include="..\WSAUnity\SympleMedia.cs">
       <Link>SympleMedia.cs</Link>
+    </Compile>
+    <Compile Include="..\WSAUnity\SympleMessage.cs">
+      <Link>SympleMessage.cs</Link>
     </Compile>
     <Compile Include="..\WSAUnity\SymplePlayer.cs">
       <Link>SymplePlayer.cs</Link>
@@ -96,6 +105,9 @@
     </Compile>
     <Compile Include="..\WSAUnity\SymplePlayerOptions.cs">
       <Link>SymplePlayerOptions.cs</Link>
+    </Compile>
+    <Compile Include="..\WSAUnity\SymplePresence.cs">
+      <Link>SymplePresence.cs</Link>
     </Compile>
     <Compile Include="..\WSAUnity\SympleRoster.cs">
       <Link>SympleRoster.cs</Link>
