@@ -30,14 +30,14 @@ namespace WSAUnity
 
             if (this.options.engine == null)
             {
-                var engine = SympleMediaPreferredCompatibleEngine(this.options.format);
+                var engine = SympleMedia.Instance.preferredCompatibleEngine(this.options.format);
                 if (engine != null)
                 {
                     this.options.engine = engine.id;
                 }
             }
             
-            this.bindEvents();
+            //this.bindEvents(); // here we would set up the event logic to bind UI buttons to actions like play/stop/mute/unmute/etc
             this.playing = false;
         }
 
@@ -64,7 +64,7 @@ namespace WSAUnity
             } catch (Exception e)
             {
                 this.setState("error");
-                this.displayMessage("error", e);
+                this.displayMessage("error", e.Message);
                 throw e;
             }
         }

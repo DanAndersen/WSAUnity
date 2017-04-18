@@ -26,7 +26,16 @@ namespace WSAUnity
         public abstract bool support();
         public abstract void setup();
         public abstract void destroy();
-        public virtual async void play(Dictionary<string, object> parameters) { }  // NOTE: removed "parameters" from play()
+        public void play(Dictionary<string, object> parameters)
+        {
+#if NETFX_CORE
+            this._play(parameters);
+#endif
+        }
+
+#if NETFX_CORE
+        public virtual async void _play(Dictionary<string, object> parameters) { }
+#endif
 
         public abstract void stop();
         public virtual void pause(bool flag) { }

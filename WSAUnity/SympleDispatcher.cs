@@ -9,18 +9,18 @@ namespace WSAUnity
 {
     public class SympleDispatcher
     {
-        public Dictionary<string, List<Action<object>>> listeners { get; }
+        public Dictionary<string, List<object>> listeners { get; }
 
         public SympleDispatcher()
         {
-            listeners = new Dictionary<string, List<Action<object>>>();
+            listeners = new Dictionary<string, List<object>>();
         }
 
         public void on(string eventLabel, Action<object> fn)
         {
             if (!listeners.ContainsKey(eventLabel))
             {
-                listeners[eventLabel] = new List<Action<object>>();
+                listeners[eventLabel] = new List<object>();
             }
             listeners[eventLabel].Add(fn);
         }

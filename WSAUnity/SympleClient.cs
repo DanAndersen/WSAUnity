@@ -34,10 +34,12 @@ namespace WSAUnity
             this.roster = new SympleRoster(this);
             this.socket = null;
 
+            Uri socketUri = new Uri(options.url);
+
             ioOptions = new IO.Options();
             ioOptions.Secure = options.secure;
-            ioOptions.Port = serverSSLPort;
-            ioOptions.Hostname = serverHostname;
+            ioOptions.Port = socketUri.Port;
+            ioOptions.Hostname = socketUri.Host;
             ioOptions.IgnoreServerCertificateValidation = true;
         }
 
@@ -72,9 +74,16 @@ namespace WSAUnity
                         this.setError("auth", (string)resObj);
                         return;
                     }
-                    this.peer = Symple.extend(this.peer, res["data"]);
-                    this.roster.add((Dictionary<string, object>)res["data"]);
-                    this.sendPresence(probe: true);
+
+                    Dictionary<string, object> resData = (Dictionary < string, object> ) res["data"];
+
+                    this.peer = Symple.extend(this.peer, resData);
+                    this.roster.add(resData);
+
+                    Dictionary<string, object> sendPresenceParams = new Dictionary<string, object>();
+                    sendPresenceParams["probe"] = true;
+
+                    this.sendPresence(sendPresenceParams);
                     this.dispatch("announce", res);
                     this.socket.On(Socket.EVENT_MESSAGE, (m) =>
                     {
@@ -133,7 +142,7 @@ namespace WSAUnity
         // return the online status
         public bool online()
         {
-            return this.peer.online;
+            return (bool) this.peer["online"];
         }
 
         public void join(Dictionary<string, object> room)
@@ -151,18 +160,19 @@ namespace WSAUnity
             p = p ?? new Dictionary<string, object>();
             if (p["data"] != null)
             {
-                p["data"] = Symple.merge(this.peer, p["data"]);
+                Dictionary<string, object> pDataObj = (Dictionary<string, object>)p["data"];
+                p["data"] = Symple.merge(this.peer, pDataObj);
             } else
             {
                 p["data"] = this.peer;
             }
-            this.send(new SymplePresence(p));
+            this.send(Symple.initPresence(p));
         }
 
         // send a message to the given peer
         // m = JSON object
         // to = either a string or a JSON object to build an address from
-        public void send(Dictionary<string, object> m, object to)
+        public void send(Dictionary<string, object> m, object to = null)
         {
             if (!this.online())
             {
@@ -181,7 +191,7 @@ namespace WSAUnity
 
             if (m["id"] == null)
             {
-                m.id = SympleRandomString(8);
+                m["id"] = Symple.randomString(8);
             }
 
             if (to != null)
@@ -191,7 +201,8 @@ namespace WSAUnity
 
             if (m["to"].GetType() == typeof(Dictionary<string, object>))
             {
-                m["to"] = SympleBuildAddress(m["to"]);
+                Dictionary<string, object> mToObj = (Dictionary<string, object>)m["to"];
+                m["to"] = Symple.buildAddress(mToObj);
             }
 
             if (m["to"] != null && m["to"].GetType() != typeof(string))
@@ -199,7 +210,7 @@ namespace WSAUnity
                 throw new Exception("message 'to' attribute must be an address string");
             }
 
-            m["from"] = SympleBuildAddress(this.peer);
+            m["from"] = Symple.buildAddress(this.peer);
 
             if (m["from"] == m["to"])
             {
@@ -244,17 +255,87 @@ namespace WSAUnity
             }
         }
 
+        private void sendCommand(Dictionary<string, object> c, object to, Action<object> fn, bool once)
+        {
+            //c = new SympleCommand(c, to);
+            c = new SympleCommand(c); // NOTE: removed "to" since I don't know what to do with it
+            this.send(c);
+
+            if (fn != null)
+            {
+                Dictionary<string, object> filters = new Dictionary<string, object>();
+                filters["id"] = c["id"];
+
+                Action<object> after = (res) =>
+                {
+                    Dictionary<string, object> resObj = (Dictionary<string, object>)res;
+                    int status = (int)resObj["status"];
+
+                    if (once || (
+                    // 202 (Accepted) and 406 (Not acceptable) responses codes
+                    // signal that the command has not yet completed.
+                    status != 202 && status != 406)) 
+                    {
+                        this.clear("command", fn);
+                    }
+                };
+
+                this.onResponse("command", filters, fn, after);
+            }
+        }
+
+        private void onResponse(string eventLabel, Dictionary<string, object> filters, Action<object> fn, Action<object> after) {
+            if (!this.listeners.ContainsKey(eventLabel))
+            {
+                this.listeners[eventLabel] = new List<object>();
+            }
+
+            if (fn != null)
+            {
+                Dictionary<string, object> listener = new Dictionary<string, object>();
+                listener["fn"] = fn;
+                listener["after"] = after;
+                listener["filters"] = filters;
+
+                this.listeners[eventLabel].Add(listener);
+            }
+        }
+
         // dispatch function for handling filtered message response callbacks
         private bool dispatchResponse(string eventLabel, params object[] arguments)
         {
+            var data = arguments;
+
             if (this.listeners.ContainsKey(eventLabel))
             {
-                List<Action<object>> listenersForEvent = listeners[eventLabel];
-                foreach (Action<object> listenerForEvent in listenersForEvent)
+                List<object> listenersForEvent = listeners[eventLabel];
+                foreach (object listenerForEvent in listenersForEvent)
                 {
-                    asdf; // TODO: need to figure out the dispatcher listener logic here
+                    if (listenerForEvent.GetType() == typeof(Dictionary<string, object>))
+                    {
+                        Dictionary<string, object> listenerObj = (Dictionary<string, object>)listenerForEvent;
+                        if (listenerObj["filters"] != null)
+                        {
+                            {
+                                Dictionary<string, object> filtersObj = (Dictionary<string, object>)listenerObj["filters"];
+                                Dictionary<string, object> dataObj = (Dictionary<string, object>)data[0];
+                                if (Symple.match(filtersObj, dataObj))
+                                {
+                                    Action<object> fn = (Action<object>)listenerObj["fn"];
+                                    fn(data);
+                                    if (listenerObj["after"] != null)
+                                    {
+                                        Action<object> after = (Action<object>)listenerObj["after"];
+                                        after(data);
+                                    }
+                                    return true;
+                                }
+                            }
+                        }
+                    }
                 }
             }
+            return false;
         }
     }
 }

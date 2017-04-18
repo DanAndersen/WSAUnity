@@ -30,7 +30,7 @@ namespace PluginTestApp
 
         SymplePlayer player;
         SympleClient client;
-        SymplePeer remotePeer;
+        Dictionary<string, object> remotePeer;
         bool initialized = false;
 
         public MainPage()
@@ -43,10 +43,14 @@ namespace PluginTestApp
 
         private void startPlaybackAndRecording()
         {
-            player.play();
-            player.engine.sendLocalSDP = (desc) =>
+            Dictionary<string, object> playParams = new Dictionary<string, object>();   // empty params
+
+            player.play(playParams);
+
+            var engine = (SymplePlayerEngineWebRTC)player.engine;
+            engine.sendLocalSDP = (desc) =>
             {
-                Debug.WriteLine("send offer: " + JSON.stringify(desc));
+                Debug.WriteLine("send offer");
 
                 Dictionary<string, object> parameters = new Dictionary<string, object>();
                 parameters["to"] = remotePeer;
@@ -55,7 +59,7 @@ namespace PluginTestApp
 
                 client.send(parameters);
             };
-            player.engine.sendLocalCandidate = (cand) =>
+            engine.sendLocalCandidate = (cand) =>
             {
                 Dictionary<string, object> parameters = new Dictionary<string, object>();
                 parameters["to"] = remotePeer;
@@ -73,20 +77,28 @@ namespace PluginTestApp
             SympleClientOptions CLIENT_OPTIONS = new SympleClientOptions();
             CLIENT_OPTIONS.secure = true;
             CLIENT_OPTIONS.url = "https://andersed-talos.ddns.net:443";
-            CLIENT_OPTIONS.peer = new SymplePeer(){ user = "demo", name = "Demo User", group = "public"};
-
+            CLIENT_OPTIONS.peer = new Dictionary<string, object>();
+            CLIENT_OPTIONS.peer["user"] = "demo";
+            CLIENT_OPTIONS.peer["name"] = "Demo User";
+            CLIENT_OPTIONS.peer["group"] = "public";
 
             SymplePlayerOptions playerOptions = new SymplePlayerOptions();
             playerOptions.engine = "WebRTC";
             playerOptions.initiator = true;
+
+            // WebRTC config
+            // This is where you would add TURN servers for use in production
+            Org.WebRtc.RTCConfiguration WEBRTC_CONFIG = new Org.WebRtc.RTCConfiguration();
+            WEBRTC_CONFIG.IceServers = new List<Org.WebRtc.RTCIceServer>();
+
             playerOptions.rtcConfig = WEBRTC_CONFIG;
-            playerOptions.iceMediaConstraints = asdf;
+            //playerOptions.iceMediaConstraints = asdf; // TODO: not using iceMediaConstraints in latest code?
             playerOptions.onStateChange = (player, state, message) =>
             {
                 player.displayStatus(state);
             };
 
-
+            Debug.WriteLine("creating player");
             player = new SymplePlayer(playerOptions);
 
             client = new SympleClient(CLIENT_OPTIONS);
@@ -122,7 +134,7 @@ namespace PluginTestApp
 
                 Dictionary<string, object> from = (Dictionary<string, object>)m["from"];
 
-                if (remotePeer != null && remotePeer.id != from["id"])
+                if (remotePeer != null && remotePeer["id"] != from["id"])
                 {
                     Debug.WriteLine("Dropping message from unknown peer: " + m);
                     return;
@@ -132,14 +144,21 @@ namespace PluginTestApp
                     Debug.WriteLine("Unexpected offer for one-way streaming");
                 } else if (m["answer"] != null)
                 {
+                    SymplePlayerEngineWebRTC engine = (SymplePlayerEngineWebRTC)player.engine;
+
                     string answerJsonString = JsonConvert.SerializeObject(m["answer"], Formatting.None);
 
+                    Dictionary<string, object> answerParams = (Dictionary<string, object>)m["answer"];
+
                     Debug.WriteLine("Receive answer: " + answerJsonString);
-                    player.engine.recvRemoteSDP(m["answer"]);
+                    engine.recvRemoteSDP(answerParams);
                 } else if (m["candidate"] != null)
                 {
                     SymplePlayerEngineWebRTC engine = (SymplePlayerEngineWebRTC)player.engine;
-                    engine.recvRemoteCandidate(m["candidate"]);
+
+                    Dictionary<string, object> candidateParams = (Dictionary <string, object>) m["candidate"];
+
+                    engine.recvRemoteCandidate(candidateParams);
                 }
             });
 

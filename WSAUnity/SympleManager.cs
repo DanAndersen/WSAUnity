@@ -11,7 +11,7 @@ namespace WSAUnity
         List<Dictionary<string, object>> store;
         string key;
 
-        public SympleManager(object options)
+        public SympleManager()
         {
             // NOTE: removed all references to this.options and this.key since they appear to be unused
             this.key = "id";

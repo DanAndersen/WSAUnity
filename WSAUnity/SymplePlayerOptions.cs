@@ -4,7 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+#if NETFX_CORE
 using Org.WebRtc;
+#endif
 
 namespace WSAUnity
 {
@@ -14,8 +16,10 @@ namespace WSAUnity
         public string engine;
         public Action<SymplePlayer, string> onCommand;
         public Action<SymplePlayer, string, string> onStateChange;
-        public RTCConfiguration rtcConfig;
         public bool initiator;
+#if NETFX_CORE
+        public RTCConfiguration rtcConfig;
         public RTCMediaStreamConstraints userMediaConstraints;
+#endif
     }
 }

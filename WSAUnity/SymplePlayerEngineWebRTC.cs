@@ -16,6 +16,7 @@ namespace WSAUnity
 #if NETFX_CORE
         static SymplePlayerEngineWebRTC()
         {
+            Debug.WriteLine("registering WebRTC engine");
             SympleMedia.instance.registerEngine(new SympleEngineOptions() { id = "WebRTC", name = "WebRTC Player", formats = "VP9, VP4, H.264, Opus", preference = 100, support = () => {
                 return true;
             } });
@@ -45,8 +46,10 @@ namespace WSAUnity
         {
             Debug.WriteLine("symple:webrtc: init");
 
+#if NETFX_CORE
             rtcConfig = player.options.rtcConfig ?? new RTCConfiguration() { IceServers = { new RTCIceServer() { Url = "stun:stun.l.google.com:19302" } } };
-            
+#endif
+
             /*
             this.rtcOptions = player.options.rtcOptions || {
                 optional: [
@@ -59,18 +62,22 @@ namespace WSAUnity
             // and will be sending the initial SDP Offer.
             this.initiator = player.options.initiator;
 
+#if NETFX_CORE
             // The `MediaStreamConstraints` object to pass to `getUserMedia`
             this.userMediaConstraints = player.options.userMediaConstraints ?? new RTCMediaStreamConstraints() { audioEnabled = true, videoEnabled = true };
 
             // Reference to the active local or remote media stream
             this.activeStream = null;
+#endif
         }
 
         public override void setup()
         {
             Debug.WriteLine("symple:webrtc: setup");
 
+#if NETFX_CORE
             this._createPeerConnection();
+#endif
 
             Debug.WriteLine("====== here is where we could create the 'video' element and add it to the webpage ======");
         }
@@ -79,9 +86,11 @@ namespace WSAUnity
         {
             Debug.WriteLine("symple:webrtc: destroy");
 
+#if NETFX_CORE
             this.sendLocalSDP = null;
             this.sendLocalCandidate = null;
             this.activeStream = null; // TODO: needs explicit close?
+#endif
 
             Debug.WriteLine("====== here is where we would destroy the video element ======");
             /*
@@ -93,16 +102,18 @@ namespace WSAUnity
             }
             */
 
+#if NETFX_CORE
             if (this.pc != null)
             {
                 this.pc.Close();
                 this.pc = null;
                 // anything else needed for peer connection cleanup?
             }
+#endif
         }
 
 #if NETFX_CORE
-        public override async void play(Dictionary<string, object> parameters) {
+        public override async void _play(Dictionary<string, object> parameters) {
             Debug.WriteLine("symple:webrtc: play");
 
             // if there is an active stream, play it now
@@ -167,7 +178,24 @@ namespace WSAUnity
 
             try
             {
-                RTCSdpType sdpType = new RTCSdpType(desc["type"]);
+                string sdpTypeString = (string) desc["type"];
+                RTCSdpType sdpType;
+
+                if (sdpTypeString.Equals("offer"))
+                {
+                    sdpType = RTCSdpType.Offer;
+                }
+                else if (sdpTypeString.Equals("pranswer"))
+                {
+                    sdpType = RTCSdpType.Pranswer;
+                }
+                else if (sdpTypeString.Equals("answer"))
+                {
+                    sdpType = RTCSdpType.Answer;
+                } else {
+                    throw new Exception("unknown rtc sdp type: " + sdpTypeString);
+                }
+
                 string sdp = (string)desc["sdp"];
 
                 await this.pc.SetRemoteDescription(new RTCSessionDescription(sdpType, sdp));
@@ -180,22 +208,26 @@ namespace WSAUnity
         }
 
         // called when remote candidate is received from the peer
-        public async void recvRemoteCandidate(RTCIceCandidate candidate)
+        public async void recvRemoteCandidate(Dictionary<string, object> candidateParams)
         {
-            Debug.WriteLine("symple:webrtc: recv remote candidate " + candidate);
+            Debug.WriteLine("symple:webrtc: recv remote candidate " + candidateParams);
             if (this.pc == null)
             {
                 throw new Exception("the peer connection is not initialized"); // call recvRemoteSDP first
             }
 
-            await this.pc.AddIceCandidate(candidate);
+            string candidate = (string) candidateParams["candidate"];
+            string sdpMid = (string) candidateParams["sdpMid"];
+            ushort sdpMLineIndex = (ushort) candidateParams["sdpMLineIndex"];
+
+            await this.pc.AddIceCandidate(new RTCIceCandidate(candidate, sdpMid, sdpMLineIndex));
         }
 
         // Called when local SDP is ready to be sent to the peer.
-        private Action<RTCSessionDescription> sendLocalSDP = null; // new Function,
+        public Action<RTCSessionDescription> sendLocalSDP = null; // new Function,
 
         // Called when a local candidate is ready to be sent to the peer.
-        private Action<RTCIceCandidate> sendLocalCandidate = null; // new Function,
+        public Action<RTCIceCandidate> sendLocalCandidate = null; // new Function,
 
         private void _createPeerConnection()
         {
@@ -224,8 +256,8 @@ namespace WSAUnity
 
             pc.OnAddStream += (MediaStreamEvent mediaStreamEvent) =>
             {
-                string objectURL = createObjectURL(mediaStreamEvent.Stream);
-                Debug.WriteLine("symple:webrtc: remote stream added: " + objectURL);
+                //string objectURL = createObjectURL(mediaStreamEvent.Stream);
+                Debug.WriteLine("symple:webrtc: remote stream added");
 
                 // Set the state to playing once candidates have completed gathering.
                 // This is the best we can do until ICE onstatechange is implemented.
