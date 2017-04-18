@@ -9,7 +9,7 @@ namespace WSAUnity
 {
     public class SympleMedia
     {
-        public static SympleMedia instance;
+        private static SympleMedia instance;
 
         private SympleMedia() { }
 

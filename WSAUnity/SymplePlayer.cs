@@ -12,6 +12,17 @@ namespace WSAUnity
 {
     public class SymplePlayer
     {
+        static SymplePlayer()
+        {
+#if NETFX_CORE
+        Debug.WriteLine("registering WebRTC engine");
+            SympleMedia.Instance.registerEngine(new SympleEngineOptions() { id = "WebRTC", name = "WebRTC Player", formats = "VP9, VP4, H.264, Opus", preference = 100, support = () => {
+                return true;
+            } });
+#endif
+        }
+
+
         string state;
 
         bool playing;
@@ -20,9 +31,9 @@ namespace WSAUnity
 
         public SymplePlayerEngine engine { get; private set; }
 
-        public SymplePlayer(SymplePlayerOptions options)
+        public SymplePlayer(SymplePlayerOptions opts)
         {
-            this.options = options;
+            this.options = opts;
             this.options.format = "MJPEG";
             this.options.engine = null;
             this.options.onCommand = (player, cmd) => { };

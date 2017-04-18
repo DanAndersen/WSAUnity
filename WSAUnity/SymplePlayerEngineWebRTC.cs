@@ -13,15 +13,6 @@ namespace WSAUnity
 {
     public class SymplePlayerEngineWebRTC : SymplePlayerEngine
     {
-#if NETFX_CORE
-        static SymplePlayerEngineWebRTC()
-        {
-            Debug.WriteLine("registering WebRTC engine");
-            SympleMedia.instance.registerEngine(new SympleEngineOptions() { id = "WebRTC", name = "WebRTC Player", formats = "VP9, VP4, H.264, Opus", preference = 100, support = () => {
-                return true;
-            } });
-        }
-#endif
 
         bool initiator;
 

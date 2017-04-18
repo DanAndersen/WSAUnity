@@ -28,8 +28,8 @@ namespace PluginTestApp
     {
         Plugin p;
 
-        SymplePlayer player;
-        SympleClient client;
+        SymplePlayer player = null;
+        SympleClient client = null;
         Dictionary<string, object> remotePeer;
         bool initialized = false;
 
@@ -97,6 +97,12 @@ namespace PluginTestApp
             {
                 player.displayStatus(state);
             };
+
+#if NETFX_CORE
+            Debug.WriteLine("fooasdfasdf");
+#else
+            Debug.WriteLine("bar");
+#endif
 
             Debug.WriteLine("creating player");
             player = new SymplePlayer(playerOptions);

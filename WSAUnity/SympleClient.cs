@@ -30,7 +30,7 @@ namespace WSAUnity
             options.token = null;
 
             this.peer = options.peer ?? new Dictionary<string, object>();
-            this.peer["rooms"] = options.peer["rooms"] ?? new List<object>();
+            this.peer["rooms"] = options.peer.ContainsKey("rooms") ? options.peer["rooms"] : new List<object>();
             this.roster = new SympleRoster(this);
             this.socket = null;
 
