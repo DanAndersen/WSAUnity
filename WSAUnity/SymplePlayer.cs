@@ -65,7 +65,9 @@ namespace WSAUnity
             {
                 if (this.engine == null)
                 {
+                    Debug.WriteLine("setting up engine");
                     this.setup();
+                    Debug.WriteLine("set up engine");
                 }
 
                 if (this.state != "playing")

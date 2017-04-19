@@ -15,6 +15,7 @@ using Windows.UI.Xaml.Navigation;
 using System.Diagnostics;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Org.WebRtc;
 
 using WSAUnity;
 
@@ -110,9 +111,10 @@ namespace PluginTestApp
 
             // WebRTC config
             // This is where you would add TURN servers for use in production
-            Org.WebRtc.RTCConfiguration WEBRTC_CONFIG = new Org.WebRtc.RTCConfiguration();
-            WEBRTC_CONFIG.IceServers = new List<Org.WebRtc.RTCIceServer>();
-
+            RTCConfiguration WEBRTC_CONFIG = new RTCConfiguration { IceServers = new List<RTCIceServer> {
+                new RTCIceServer { Url = "stun:stun.l.google.com:19302", Username = string.Empty, Credential = string.Empty }
+            } };
+            
             playerOptions.rtcConfig = WEBRTC_CONFIG;
             //playerOptions.iceMediaConstraints = asdf; // TODO: not using iceMediaConstraints in latest code?
             playerOptions.onStateChange = (player, state, message) =>
@@ -156,13 +158,24 @@ namespace PluginTestApp
 
             client.on("message", (mObj) =>
             {
-                JObject m = (JObject)mObj;
+
+                Debug.WriteLine("mObj.GetType().ToString(): " + mObj.GetType().ToString());
+
+                JObject m = (JObject) ((Object[])mObj)[0];
 
                 Debug.WriteLine("recv message: " + m);
+                Debug.WriteLine("remotePeer: " + remotePeer);
 
-                JObject from = (JObject)m["from"];
+                var mFrom = m["from"];
 
-                if (remotePeer != null && remotePeer["id"] != from["id"])
+                JToken mFromId = null;
+
+                if (mFrom.Type == JTokenType.Object)
+                {
+                    mFromId = mFrom["id"];
+                }
+
+                if (remotePeer != null && !remotePeer["id"].Equals(mFromId))
                 {
                     Debug.WriteLine("Dropping message from unknown peer: " + m);
                     return;

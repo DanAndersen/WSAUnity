@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
+using System.Diagnostics;
 
 namespace WSAUnity
 {
@@ -41,6 +42,16 @@ namespace WSAUnity
 
         public virtual JObject get(string key)
         {
+            Debug.WriteLine("symple:manager: get: " + key);
+            Debug.WriteLine("== start store ==");
+            foreach (var item in this.store)
+            {
+                Debug.WriteLine(item);
+            }
+            Debug.WriteLine("== end store ==");
+
+
+
             for (int i = 0; i < this.store.Count; i++)
             {
                 if ((string)(this.store[i][this.key]) == key)

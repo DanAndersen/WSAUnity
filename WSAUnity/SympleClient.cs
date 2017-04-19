@@ -142,9 +142,15 @@ namespace WSAUnity
 
                         // replace the from attribute with the full peer object.
                         // this will only work for peer messages, not server messages.
-                        var rpeer = this.roster.get((string)m["from"]);
+
+                        string mFrom = (string)m["from"];
+                        Debug.WriteLine("looking up rpeer in roster, mFrom = " + mFrom + "...");
+                        
+
+                        var rpeer = this.roster.get(mFrom);
                         if (rpeer != null)
                         {
+                            Debug.WriteLine("found rpeer: " + rpeer);
                             m["from"] = rpeer;
                         } else
                         {

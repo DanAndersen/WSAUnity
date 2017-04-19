@@ -39,7 +39,20 @@ namespace WSAUnity
             Debug.WriteLine("symple:webrtc: init");
 
 #if NETFX_CORE
-            rtcConfig = player.options.rtcConfig ?? new RTCConfiguration() { IceServers = { new RTCIceServer() { Url = "stun:stun.l.google.com:19302" } } };
+
+            WebRTC.Initialize(null);    // needed before calling any webrtc functions http://stackoverflow.com/questions/43331677/webrtc-for-uwp-new-rtcpeerconnection-doesnt-complete-execution
+
+            if (player.options.rtcConfig != null)
+            {
+                Debug.WriteLine("using provided rtcconfig");
+                this.rtcConfig = player.options.rtcConfig;
+            } else
+            {
+                Debug.WriteLine("adding default rtcconfig");
+                this.rtcConfig = new RTCConfiguration();
+                this.rtcConfig.IceServers.Add(new RTCIceServer() { Url = "stun:stun.l.google.com:19302", Username = string.Empty, Credential = string.Empty });
+                Debug.WriteLine("added default rtcconfig");
+            }
 #endif
 
             /*
@@ -129,6 +142,7 @@ namespace WSAUnity
                     _media = Media.CreateMedia();
                     
                     MediaStream localStream = await _media.GetUserMedia(this.userMediaConstraints);
+                    Debug.WriteLine("localStream: " + localStream);
 
                     // play the local video stream and create the SDP offer
 
@@ -144,8 +158,6 @@ namespace WSAUnity
                     this.activeStream = localStream;
                 }
             }
-
-            throw new NotImplementedException();
         }
         
         // called when local SDP is ready to be sent to the peer
@@ -231,6 +243,11 @@ namespace WSAUnity
             }
 
             Debug.WriteLine("symple:webrtc: create peer connection: " + this.rtcConfig); // NOTE: removed rtcOptions
+
+            foreach (var s in this.rtcConfig.IceServers)
+            {
+                Debug.WriteLine(s.Url + " " + s.Username + " " + s.Credential);
+            }
 
             this.pc = new RTCPeerConnection(this.rtcConfig);
             Debug.WriteLine("symple:webrtc: created this.pc");

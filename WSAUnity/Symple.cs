@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
+using System.Diagnostics;
 
 namespace WSAUnity
 {
@@ -83,7 +84,7 @@ namespace WSAUnity
             {
                 string p = prop.Name;
 
-                if (l[p] == null || r[p] == null || r[p] != l[p])
+                if (l[p] == null || r[p] == null || !r[p].Equals(l[p]))
                 {
                     res = false;
                     break;
