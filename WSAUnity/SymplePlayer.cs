@@ -16,7 +16,7 @@ namespace WSAUnity
         static SymplePlayer()
         {
 #if NETFX_CORE
-        Debug.WriteLine("registering WebRTC engine");
+            Messenger.Broadcast(SympleLog.LogTrace, "registering WebRTC engine");
             SympleMedia.Instance.registerEngine(new SympleEngineOptions() { id = "WebRTC", name = "WebRTC Player", formats = "VP9, VP4, H.264, Opus", preference = 100, support = () => {
                 return true;
             } });
@@ -60,14 +60,12 @@ namespace WSAUnity
 
         public void play(JObject parameters)
         {
-            Debug.WriteLine("symple:player: play, " + parameters);
+            Messenger.Broadcast(SympleLog.LogInfo, "symple:player: play, " + parameters);
             try
             {
                 if (this.engine == null)
                 {
-                    Debug.WriteLine("setting up engine");
                     this.setup();
-                    Debug.WriteLine("set up engine");
                 }
 
                 if (this.state != "playing")
@@ -85,7 +83,7 @@ namespace WSAUnity
 
         private void mute(bool flag)
         {
-            Debug.WriteLine("symple:player: mute " + flag);
+            Messenger.Broadcast(SympleLog.LogInfo, "symple:player: mute " + flag);
 
             if (this.engine != null)
             {
@@ -108,16 +106,16 @@ namespace WSAUnity
         {
             if (data != null)
             {
-                Debug.WriteLine(data);
+                Messenger.Broadcast(SympleLog.StateChanged, data);
             } else
             {
-                Debug.WriteLine("");
+                Messenger.Broadcast(SympleLog.StateChanged, "");
             }
         }
 
         public void setState(string state, string message = null)
         {
-            Debug.WriteLine("symple:player: set state " + this.state + " => " + state);
+            Messenger.Broadcast(SympleLog.LogInfo, "symple:player: set state " + this.state + " => " + state);
 
             if (state.Equals(this.state))
             {
@@ -135,14 +133,14 @@ namespace WSAUnity
                 this.displayMessage(null);
             }
 
-            Debug.WriteLine("TODO: change any appearances in the UI based on state change");
+            Messenger.Broadcast(SympleLog.StateChanged, state);
 
             this.options.onStateChange(this, state, message);
         }
 
         void displayMessage(string type = null, string message = null)
         {
-            Debug.WriteLine("symple:player: display message " + type + " " + message);
+            Messenger.Broadcast(SympleLog.LogDebug, "symple:player: display message " + type + " " + message);
         }
     }
 }

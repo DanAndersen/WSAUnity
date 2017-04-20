@@ -58,8 +58,14 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\WSAUnity\Callback.cs">
+      <Link>Callback.cs</Link>
+    </Compile>
     <Compile Include="..\WSAUnity\JObjectWithActions.cs">
       <Link>JObjectWithActions.cs</Link>
+    </Compile>
+    <Compile Include="..\WSAUnity\Messenger.cs">
+      <Link>Messenger.cs</Link>
     </Compile>
     <Compile Include="..\WSAUnity\Plugin.cs">
       <Link>Plugin.cs</Link>
@@ -84,6 +90,9 @@
     </Compile>
     <Compile Include="..\WSAUnity\SympleEvent.cs">
       <Link>SympleEvent.cs</Link>
+    </Compile>
+    <Compile Include="..\WSAUnity\SympleLog.cs">
+      <Link>SympleLog.cs</Link>
     </Compile>
     <Compile Include="..\WSAUnity\SympleManager.cs">
       <Link>SympleManager.cs</Link>

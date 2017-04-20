@@ -43,23 +43,25 @@ namespace WSAUnity
             ioOptions.Hostname = socketUri.Host;
             ioOptions.IgnoreServerCertificateValidation = true;
 
-
-            Debug.WriteLine("done initing SympleClient, values: ");
-            Debug.WriteLine("this.peer: " + this.peer.ToString());
+            Messenger.Broadcast(SympleLog.LogTrace, "done initing SympleClient, values: ");
+            Messenger.Broadcast(SympleLog.LogTrace, "this.peer: " + this.peer.ToString());
         }
 
         public void connect()
         {
-            Debug.WriteLine("symple:client: connecting");
+            Messenger.Broadcast(SympleLog.LogInfo, "symple:client: connecting");
 
             if (this.socket != null)
             {
-                throw new Exception("the client socket is not null");
+                string err = "the client socket is not null";
+                Messenger.Broadcast(SympleLog.LogError, err);
+                throw new Exception(err);
             }
 
             this.socket = IO.Socket(this.options["url"].ToString(), this.ioOptions);
             this.socket.On(Socket.EVENT_CONNECT, () => {
-                Debug.WriteLine("ssymple:client: connected");
+                Messenger.Broadcast(SympleLog.LogInfo, "symple:client: connected");
+                Messenger.Broadcast(SympleLog.Connected);
 
                 JObject announceData = new JObject();
                 announceData["user"] = this.peer["user"] ?? "";
@@ -68,10 +70,11 @@ namespace WSAUnity
                 announceData["token"] = options["token"] ?? "";
 
                 string announceDataJsonString = JsonConvert.SerializeObject(announceData, Formatting.None);
-                Debug.WriteLine("announceDataJsonString: " + announceDataJsonString);
+                Messenger.Broadcast(SympleLog.LogTrace, "announceDataJsonString: " + announceDataJsonString);
 
                 this.socket.Emit("announce", (resObj) => {
-                    Debug.WriteLine("symple:client: announced " + resObj);
+                    Messenger.Broadcast(SympleLog.LogDebug, "symple:client: announced " + resObj);
+                    Messenger.Broadcast(SympleLog.Announced);
 
                     JObject res = (JObject) resObj;
 
@@ -93,7 +96,7 @@ namespace WSAUnity
                     this.dispatch("announce", res);
                     this.socket.On(Socket.EVENT_MESSAGE, (msg) =>
                     {
-                        Debug.WriteLine("symple:client receive " + msg);
+                        Messenger.Broadcast(SympleLog.LogTrace, "symple:client receive " + msg);
 
                         JObject m = (JObject)msg;
 
@@ -136,7 +139,7 @@ namespace WSAUnity
 
                         if (m["from"].Type != JTokenType.String)
                         {
-                            Debug.WriteLine("symple:client: invalid sender address: " + m);
+                            Messenger.Broadcast(SympleLog.LogError, "symple:client: invalid sender address: " + m);
                             return;
                         }
 
@@ -144,17 +147,16 @@ namespace WSAUnity
                         // this will only work for peer messages, not server messages.
 
                         string mFrom = (string)m["from"];
-                        Debug.WriteLine("looking up rpeer in roster, mFrom = " + mFrom + "...");
+                        Messenger.Broadcast(SympleLog.LogTrace, "looking up rpeer in roster, mFrom = " + mFrom + "...");
                         
-
                         var rpeer = this.roster.get(mFrom);
                         if (rpeer != null)
                         {
-                            Debug.WriteLine("found rpeer: " + rpeer);
+                            Messenger.Broadcast(SympleLog.LogTrace, "found rpeer: " + rpeer);
                             m["from"] = rpeer;
                         } else
                         {
-                            Debug.WriteLine("symple:client: got message from unknown peer: " + m);
+                            Messenger.Broadcast(SympleLog.LogInfo, "symple:client: got message from unknown peer: " + m);
                         }
 
                         // Dispatch to the application
@@ -173,27 +175,30 @@ namespace WSAUnity
 
             this.socket.On("connecting", () =>
             {
-                Debug.WriteLine("symple:client: connecting");
+                Messenger.Broadcast(SympleLog.LogDebug, "symple:client: connecting");
                 this.dispatch("connecting");
             });
 
             this.socket.On(Socket.EVENT_RECONNECTING, () =>
             {
-                Debug.WriteLine("symple:client: reconnecting");
+                Messenger.Broadcast(SympleLog.LogDebug, "symple:client: connecting");
+                Messenger.Broadcast(SympleLog.Reconnecting);
                 this.dispatch("reconnecting");
             });
 
             this.socket.On("connect_failed", () =>
             {
                 // called when all transports fail
-                Debug.WriteLine("symple:client: connect failed");
+                Messenger.Broadcast(SympleLog.LogError, "symple:client: connect failed");
+                Messenger.Broadcast(SympleLog.ConnectFailed);
                 this.dispatch("connect_failed");
                 this.setError("connect");
             });
 
             this.socket.On(Socket.EVENT_DISCONNECT, () =>
             {
-                Debug.WriteLine("symple:client: disconnect");
+                Messenger.Broadcast(SympleLog.LogInfo, "symple:client: disconnect");
+                Messenger.Broadcast(SympleLog.Disconnect);
                 this.peer["online"] = false;
                 this.dispatch("disconnect");
             });
@@ -286,10 +291,8 @@ namespace WSAUnity
                 throw new Exception("message sender cannot match the recipient");
             }
 
-            Debug.WriteLine("symple:client: sending" + m);
-
-            string messageJsonString = JsonConvert.SerializeObject(m, Formatting.None);
-
+            Messenger.Broadcast(SympleLog.LogTrace, "symple:client: sending" + m);
+            
             this.socket.Send(m);
         }
 
@@ -306,7 +309,7 @@ namespace WSAUnity
         // sets the client to an error state and disconnects
         public void setError(string error, string message = null)
         {
-            Debug.WriteLine("symple:client: fatal error " + error + " " + message);
+            Messenger.Broadcast(SympleLog.LogError, "symple:client: fatal error " + error + " " + message);
 
             this.dispatch("error", error, message);
             if (this.socket != null)

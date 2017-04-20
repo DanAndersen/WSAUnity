@@ -29,10 +29,10 @@ namespace WSAUnity
 
         public bool registerEngine(SympleEngineOptions engine)
         {
-            Debug.WriteLine("register media engine: " + engine);
+            Messenger.Broadcast(SympleLog.LogTrace, "register media engine: " + engine);
             if (engine.name == null || engine.support == null)
             {
-                Debug.WriteLine("symple:media: cannot register invalid engine" + engine);
+                Messenger.Broadcast(SympleLog.LogError, "symple:media: cannot register invalid engine" + engine);
                 return false;
             }
             this.engines[engine.id] = engine;

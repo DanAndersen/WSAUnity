@@ -19,8 +19,6 @@ namespace WSAUnity
         public string GetStatus()
         {
             statusMsg = "Plugin implemented successfully";
-            Debug.WriteLine("debug.writeline");
-
             return statusMsg;
         }
 
@@ -34,21 +32,7 @@ namespace WSAUnity
 #if NETFX_CORE
         private async void foo_private()
         {
-            var _media = Media.CreateMedia();
-            Debug.WriteLine("_media:");
-            Debug.WriteLine(_media);
-
-            var acd = _media.GetAudioCaptureDevices();
-            Debug.WriteLine("acd size: " + acd.Count);
-
-            var apd = _media.GetAudioPlayoutDevices();
-            Debug.WriteLine("apd size: " + apd.Count);
-
-            var vcd = _media.GetVideoCaptureDevices();
-            Debug.WriteLine("vcd size: " + vcd.Count);
-
-            MediaStream _localStream = await _media.GetUserMedia(new RTCMediaStreamConstraints() { audioEnabled = true, videoEnabled = true });
-            Debug.WriteLine("_localStream: " + _localStream);
+            
         }
 #endif
     }

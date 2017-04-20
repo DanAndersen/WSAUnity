@@ -36,7 +36,7 @@ namespace WSAUnity
 
         public SymplePlayerEngineWebRTC(SymplePlayer player) : base(player)
         {
-            Debug.WriteLine("symple:webrtc: init");
+            Messenger.Broadcast(SympleLog.LogInfo, "symple:webrtc: init");
 
 #if NETFX_CORE
 
@@ -44,14 +44,11 @@ namespace WSAUnity
 
             if (player.options.rtcConfig != null)
             {
-                Debug.WriteLine("using provided rtcconfig");
                 this.rtcConfig = player.options.rtcConfig;
             } else
             {
-                Debug.WriteLine("adding default rtcconfig");
                 this.rtcConfig = new RTCConfiguration();
                 this.rtcConfig.IceServers.Add(new RTCIceServer() { Url = "stun:stun.l.google.com:19302", Username = string.Empty, Credential = string.Empty });
-                Debug.WriteLine("added default rtcconfig");
             }
 #endif
 
@@ -78,20 +75,18 @@ namespace WSAUnity
 
         public override void setup()
         {
-            Debug.WriteLine("symple:webrtc: setup");
+            Messenger.Broadcast(SympleLog.LogDebug, "symple:webrtc: setup");
 
 #if NETFX_CORE
-            Debug.WriteLine("before _createPeerConnection");
+            Messenger.Broadcast(SympleLog.LogTrace, "before _createPeerConnection");
             this._createPeerConnection();
-            Debug.WriteLine("after _createPeerConnection");
+            Messenger.Broadcast(SympleLog.LogTrace, "after _createPeerConnection");
 #endif
-
-            Debug.WriteLine("====== here is where we could create the 'video' element and add it to the webpage ======");
         }
 
         public override void destroy()
         {
-            Debug.WriteLine("symple:webrtc: destroy");
+            Messenger.Broadcast(SympleLog.LogDebug, "symple:webrtc: destroy");
 
 #if NETFX_CORE
             this.sendLocalSDP = null;
@@ -99,7 +94,6 @@ namespace WSAUnity
             this.activeStream = null; // TODO: needs explicit close?
 #endif
 
-            Debug.WriteLine("====== here is where we would destroy the video element ======");
             /*
             if (this.video != null)
             {
@@ -121,12 +115,11 @@ namespace WSAUnity
 
 #if NETFX_CORE
         public override async void _play(JObject parameters) {
-            Debug.WriteLine("symple:webrtc: _play");
+            Messenger.Broadcast(SympleLog.LogTrace, "symple:webrtc: _play");
 
             // if there is an active stream, play it now
             if (this.activeStream != null)
             {
-                Debug.WriteLine("====== here we would play the video element ======");
                 //this.video.src = URL.createObjectURL(this.activeStream);
                 //this.video.play();
                 this.setState("playing");
@@ -137,21 +130,20 @@ namespace WSAUnity
                 // if we are the ICE initiator, then attempt to open the local video device and send the SDP offer to the peer
                 if (this.initiator)
                 {
-                    Debug.WriteLine("symple:webrtc: initiating " + this.userMediaConstraints);
-
+                    Messenger.Broadcast(SympleLog.LogInfo, "symple:webrtc: initiating " + this.userMediaConstraints);
+                    
                     _media = Media.CreateMedia();
                     
                     MediaStream localStream = await _media.GetUserMedia(this.userMediaConstraints);
-                    Debug.WriteLine("localStream: " + localStream);
+
+                    Messenger.Broadcast(SympleLog.LogInfo, "localStream: " + localStream);
 
                     // play the local video stream and create the SDP offer
-
-                    Debug.WriteLine("====== this.video.src = URL.createObjectURL(localStream); ======");
                     
                     this.pc.AddStream(localStream);
                     RTCSessionDescription desc = await this.pc.CreateOffer();
 
-                    Debug.WriteLine("symple:webrtc: offer: " + desc);
+                    Messenger.Broadcast(SympleLog.LogDebug, "symple:webrtc: offer: " + desc);
                     this._onLocalSDP(desc);
 
                     // store the active local stream
@@ -168,7 +160,7 @@ namespace WSAUnity
                 this.sendLocalSDP(desc);
             } catch (Exception e)
             {
-                Debug.WriteLine("symple:webrtc: failed to send local SDP; " + e);
+                Messenger.Broadcast(SympleLog.LogError, "symple:webrtc: failed to send local SDP; " + e);
             }
         }
 
@@ -176,7 +168,7 @@ namespace WSAUnity
         // called when remote SDP is received from the peer
         public async void recvRemoteSDP(JObject desc)
         {
-            Debug.WriteLine("symple:webrtc: recv remote sdp " + desc);
+            Messenger.Broadcast(SympleLog.LogDebug, "symple:webrtc: recv remote sdp " + desc);
             if (desc == null || desc["type"] == null || desc["sdp"] == null)
             {
                 throw new Exception("invalid remote SDP");
@@ -205,10 +197,10 @@ namespace WSAUnity
                 string sdp = (string)desc["sdp"];
 
                 await this.pc.SetRemoteDescription(new RTCSessionDescription(sdpType, sdp));
-                Debug.WriteLine("symple:webrtc: sdp success");
+                Messenger.Broadcast(SympleLog.LogInfo, "symple:webrtc: sdp success");
             } catch (Exception e)
             {
-                Debug.WriteLine("symple:webrtc: sdp error: " + e);
+                Messenger.Broadcast(SympleLog.LogError, "symple:webrtc: sdp error: " + e);
                 this.setError("cannot parse remote sdp offer");
             }
         }
@@ -216,7 +208,7 @@ namespace WSAUnity
         // called when remote candidate is received from the peer
         public async void recvRemoteCandidate(JObject candidateParams)
         {
-            Debug.WriteLine("symple:webrtc: recv remote candidate " + candidateParams);
+            Messenger.Broadcast(SympleLog.LogInfo, "symple:webrtc: recv remote candidate " + candidateParams);
             if (this.pc == null)
             {
                 throw new Exception("the peer connection is not initialized"); // call recvRemoteSDP first
@@ -242,40 +234,35 @@ namespace WSAUnity
                 throw new Exception("the peer connection is already initialized");
             }
 
-            Debug.WriteLine("symple:webrtc: create peer connection: " + this.rtcConfig); // NOTE: removed rtcOptions
-
-            foreach (var s in this.rtcConfig.IceServers)
-            {
-                Debug.WriteLine(s.Url + " " + s.Username + " " + s.Credential);
-            }
+            Messenger.Broadcast(SympleLog.LogDebug, "symple:webrtc: create peer connection: " + this.rtcConfig);
 
             this.pc = new RTCPeerConnection(this.rtcConfig);
-            Debug.WriteLine("symple:webrtc: created this.pc");
+            Messenger.Broadcast(SympleLog.LogDebug, "symple:webrtc: created this.pc");
             pc.OnIceCandidate += (RTCPeerConnectionIceEvent iceEvent) =>
             {
                 if (iceEvent.Candidate != null)
                 {
-                    Debug.WriteLine("symple:webrtc: candidate gathered: " + iceEvent.Candidate);
+                    Messenger.Broadcast(SympleLog.LogDebug, "symple:webrtc: candidate gathered: " + iceEvent.Candidate);
                     if (sendLocalCandidate != null)
                     {
                         this.sendLocalCandidate(iceEvent.Candidate);
                     }
                 } else
                 {
-                    Debug.WriteLine("symple:webrtc: candidate gathering complete");
+                    Messenger.Broadcast(SympleLog.LogInfo, "symple:webrtc: candidate gathering complete");
                 }
             };
 
             pc.OnAddStream += (MediaStreamEvent mediaStreamEvent) =>
             {
                 //string objectURL = createObjectURL(mediaStreamEvent.Stream);
-                Debug.WriteLine("symple:webrtc: remote stream added");
+                Messenger.Broadcast(SympleLog.LogInfo, "symple:webrtc: remote stream added");
 
                 // Set the state to playing once candidates have completed gathering.
                 // This is the best we can do until ICE onstatechange is implemented.
                 this.setState("playing");
 
-                Debug.WriteLine("====== here we would play the video element ======");
+                // ====== here we would play the video element ======
                 //this.video.src = objectURL;
                 //this.video.play();
 
@@ -285,9 +272,8 @@ namespace WSAUnity
 
             pc.OnRemoveStream += (MediaStreamEvent mediaStreamEvent) =>
             {
-                Debug.WriteLine("symple:webrtc: remote stream removed: " + mediaStreamEvent);
+                Messenger.Broadcast(SympleLog.LogInfo, "symple:webrtc: remote stream removed: " + mediaStreamEvent);
 
-                Debug.WriteLine("====== here we would stop the video element ======");
                 //this.video.stop();
                 //this.video.src = "";
             };
@@ -308,7 +294,6 @@ namespace WSAUnity
             // only "destroy" does that. this enables us to resume playback
             // quickly and with minimal delay.
 
-            Debug.WriteLine("====== here we would stop the video element ======");
             /*
             if (this.video)
             {
@@ -322,9 +307,8 @@ namespace WSAUnity
 
         public override void mute(bool flag)
         {
-            Debug.WriteLine("symple:webrtc: mute " + flag);
+            Messenger.Broadcast(SympleLog.LogInfo, "symple:webrtc: mute " + flag);
 
-            Debug.WriteLine("====== here we would mute the video element ======");
             /*
             if (this.video)
             {

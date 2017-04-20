@@ -16,6 +16,7 @@ using System.Diagnostics;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Org.WebRtc;
+using Windows.UI.Core;
 
 using WSAUnity;
 
@@ -40,12 +41,32 @@ namespace PluginTestApp
             this.InitializeComponent();
 
             p = new Plugin();
+
+            //Messenger.AddListener<string>(SympleLog.LogTrace, OnLog);
+            Messenger.AddListener<string>(SympleLog.LogDebug, OnLog);
+            Messenger.AddListener<string>(SympleLog.LogInfo, OnLog);
+            Messenger.AddListener<string>(SympleLog.LogError, OnLog);
+        }
+
+        private void OnLog(string msg)
+        {
+            Debug.WriteLine(msg);
+
+            // http://stackoverflow.com/questions/19341591/the-application-called-an-interface-that-was-marshalled-for-a-different-thread
+            Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal,
+            () =>
+            {
+                // Your UI update code goes here!
+                textBox.Text += msg + "\n";
+            }
+            );
+            
         }
 
 
         private void startPlaybackAndRecording()
         {
-            Debug.WriteLine("startPlaybackAndRecording");
+            Messenger.Broadcast(SympleLog.LogDebug, "startPlaybackAndRecording");
             JObject playParams = new JObject();   // empty params
 
             player.play(playParams);
@@ -53,9 +74,8 @@ namespace PluginTestApp
             var engine = (SymplePlayerEngineWebRTC)player.engine;
             engine.sendLocalSDP = (desc) =>
             {
-                Debug.WriteLine("send offer");
-
-
+                Messenger.Broadcast(SympleLog.LogDebug, "send offer");
+                
                 JObject sessionDesc = new JObject();
                 sessionDesc["sdp"] = desc.Sdp;
                 if (desc.Type == Org.WebRtc.RTCSdpType.Answer)
@@ -122,26 +142,21 @@ namespace PluginTestApp
                 player.displayStatus(state);
             };
 
-#if NETFX_CORE
-            Debug.WriteLine("fooasdfasdf");
-#else
-            Debug.WriteLine("bar");
-#endif
-
-            Debug.WriteLine("creating player");
+            Messenger.Broadcast(SympleLog.LogInfo, "creating player");
             player = new SymplePlayer(playerOptions);
 
+            Messenger.Broadcast(SympleLog.LogInfo, "creating client");
             client = new SympleClient(CLIENT_OPTIONS);
 
             client.on("announce", (peer) => {
-                Debug.WriteLine("Authentication success: " + peer);
+                Messenger.Broadcast(SympleLog.LogInfo, "Authentication success: " + peer);
             });
 
             client.on("addPeer", (peerObj) =>
             {
                 JObject peer = (JObject)peerObj;
 
-                Debug.WriteLine("adding peer: " + peer);
+                Messenger.Broadcast(SympleLog.LogInfo, "adding peer: " + peer);
 
                 if ((string)peer["user"] == "videorecorder" && !initialized)
                 {
@@ -153,18 +168,17 @@ namespace PluginTestApp
 
             client.on("removePeer", (peer) =>
             {
-                Debug.WriteLine("Removing peer: " + peer);
+                Messenger.Broadcast(SympleLog.LogInfo, "Removing peer: " + peer);
             });
 
             client.on("message", (mObj) =>
             {
-
-                Debug.WriteLine("mObj.GetType().ToString(): " + mObj.GetType().ToString());
+                Messenger.Broadcast(SympleLog.LogTrace, "mObj.GetType().ToString(): " + mObj.GetType().ToString());
 
                 JObject m = (JObject) ((Object[])mObj)[0];
 
-                Debug.WriteLine("recv message: " + m);
-                Debug.WriteLine("remotePeer: " + remotePeer);
+                Messenger.Broadcast(SympleLog.LogTrace, "recv message: " + m);
+                Messenger.Broadcast(SympleLog.LogTrace, "remotePeer: " + remotePeer);
 
                 var mFrom = m["from"];
 
@@ -177,12 +191,12 @@ namespace PluginTestApp
 
                 if (remotePeer != null && !remotePeer["id"].Equals(mFromId))
                 {
-                    Debug.WriteLine("Dropping message from unknown peer: " + m);
+                    Messenger.Broadcast(SympleLog.LogInfo, "Dropping message from unknown peer: " + m);
                     return;
                 }
                 if (m["offer"] != null)
                 {
-                    Debug.WriteLine("Unexpected offer for one-way streaming");
+                    Messenger.Broadcast(SympleLog.LogInfo, "Unexpected offer for one-way streaming");
                 } else if (m["answer"] != null)
                 {
                     SymplePlayerEngineWebRTC engine = (SymplePlayerEngineWebRTC)player.engine;
@@ -191,7 +205,7 @@ namespace PluginTestApp
 
                     JObject answerParams = (JObject)m["answer"];
 
-                    Debug.WriteLine("Receive answer: " + answerJsonString);
+                    Messenger.Broadcast(SympleLog.LogTrace, "Receive answer: " + answerJsonString);
                     engine.recvRemoteSDP(answerParams);
                 } else if (m["candidate"] != null)
                 {
@@ -205,12 +219,12 @@ namespace PluginTestApp
 
             client.on("disconnect", (peer) =>
             {
-                Debug.WriteLine("Disconnected from server");
+                Messenger.Broadcast(SympleLog.LogInfo, "Disconnected from server");
             });
 
             client.on("error", (error) =>
             {
-                Debug.WriteLine("Connection error: " + error);
+                Messenger.Broadcast(SympleLog.LogError, "Connection error: " + error);
             });
 
             client.connect();

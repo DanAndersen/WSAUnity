@@ -29,7 +29,7 @@ namespace WSAUnity
         public abstract void destroy();
         public void play(JObject parameters)
         {
-            Debug.WriteLine("symple:player:engine: play");
+            Messenger.Broadcast(SympleLog.LogDebug, "symple:player:engine: play");
 #if NETFX_CORE
             _play(parameters);
 #endif
@@ -50,7 +50,7 @@ namespace WSAUnity
 
         public virtual void setError(string error)
         {
-            Debug.WriteLine("symple:player:engine: error " + error);
+            Messenger.Broadcast(SympleLog.LogError, "symple:player:engine: error " + error);
             this.setState("error", error);
         }
         

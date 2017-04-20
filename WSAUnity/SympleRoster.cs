@@ -20,7 +20,6 @@ namespace WSAUnity
         // add a peer object to the roster
         public override void add(JObject peer)
         {
-            Debug.WriteLine("symple:roster: adding " + peer);
             if (peer == null || peer["id"] == null || peer["user"] == null)
             {
                 throw new Exception("cannot add invalid peer");
@@ -37,7 +36,6 @@ namespace WSAUnity
 
             id = (string)addr["id"] ?? id;
             var peer = base.remove(id);
-            Debug.WriteLine("symple:roster: removing " + id + ", " + peer);
             if (peer != null)
             {
                 this.client.dispatch("removePeer", peer);
