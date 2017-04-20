@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+#if NETFX_CORE
 using System.Threading.Tasks;
+#endif
 
 // Based on http://wiki.unity3d.com/index.php?title=Advanced_CSharp_Messenger
 

@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+#if NETFX_CORE
 using System.Threading.Tasks;
+#endif
 
 #if NETFX_CORE
 using Org.WebRtc;

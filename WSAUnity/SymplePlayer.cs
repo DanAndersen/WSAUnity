@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Diagnostics;
-using Newtonsoft.Json.Linq;
 
 #if NETFX_CORE
+using Newtonsoft.Json.Linq;
 using System.Threading.Tasks;
 #endif
 
@@ -58,6 +58,7 @@ namespace WSAUnity
             this.displayStatus(state);
         }
 
+#if NETFX_CORE
         public void play(JObject parameters)
         {
             Messenger.Broadcast(SympleLog.LogInfo, "symple:player: play, " + parameters);
@@ -80,6 +81,7 @@ namespace WSAUnity
                 throw e;
             }
         }
+#endif
 
         private void mute(bool flag)
         {

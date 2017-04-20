@@ -2,11 +2,15 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+#if NETFX_CORE
 using Newtonsoft.Json.Linq;
+using System.Threading.Tasks;
+#endif
+
 
 namespace WSAUnity
 {
+#if NETFX_CORE
     public class SympleMessage : JObject
     {
         public SympleMessage(JObject json)
@@ -19,4 +23,5 @@ namespace WSAUnity
             this["type"] = "message";
         }
     }
+#endif
 }

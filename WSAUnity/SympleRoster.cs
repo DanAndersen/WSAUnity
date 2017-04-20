@@ -2,9 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+#if NETFX_CORE
 using System.Threading.Tasks;
-using System.Diagnostics;
 using Newtonsoft.Json.Linq;
+#endif
+using System.Diagnostics;
+
 
 namespace WSAUnity
 {
@@ -18,6 +21,7 @@ namespace WSAUnity
         }
 
         // add a peer object to the roster
+#if NETFX_CORE
         public override void add(JObject peer)
         {
             if (peer == null || peer["id"] == null || peer["user"] == null)
@@ -28,7 +32,9 @@ namespace WSAUnity
             base.add(peer);
             this.client.dispatch("addPeer", peer);
         }
+#endif
 
+#if NETFX_CORE
         // remove the peer matching an ID or address string: user|id
         public override JObject remove(string id)
         {
@@ -42,7 +48,9 @@ namespace WSAUnity
             }
             return peer;
         }
+#endif
 
+#if NETFX_CORE
         // get the peer matching an ID or address string: user|id
         public override JObject get(string id)
         {
@@ -56,7 +64,9 @@ namespace WSAUnity
             // handle address strings
             return this.findOne(Symple.parseAddress(id));
         }
+#endif
 
+#if NETFX_CORE
         public void update(JObject data)
         {
             if (data == null || data["id"] == null)
@@ -76,5 +86,6 @@ namespace WSAUnity
                 this.add(data);
             }
         }
+#endif
     }
 }

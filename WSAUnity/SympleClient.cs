@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Diagnostics;
+#if NETFX_CORE
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+#endif
 
 #if NETFX_CORE
 using Quobject.SocketIoClientDotNet.Client;
@@ -18,17 +20,19 @@ namespace WSAUnity
 #if NETFX_CORE
         private Socket socket;
         IO.Options ioOptions;
+        JObject options;
+        JObject peer;
 #endif
         SympleRoster roster;
 
-        JObject options;
 
-        
-        JObject peer;
 
+
+
+#if NETFX_CORE
         public SympleClient(JObject options) : base()
         {
-#if NETFX_CORE
+
             this.options = options;
             options["url"] = options["url"] ?? "http://localhost:4000";
             options["secure"] = (options["url"] != null && (options["url"].ToString().IndexOf("https") == 0 || options["url"].ToString().IndexOf("wss") == 0));
@@ -51,8 +55,9 @@ namespace WSAUnity
 
             Messenger.Broadcast(SympleLog.LogTrace, "done initing SympleClient, values: ");
             Messenger.Broadcast(SympleLog.LogTrace, "this.peer: " + this.peer.ToString());
-#endif
+
         }
+#endif
 
         public void connect()
         {
@@ -227,23 +232,28 @@ namespace WSAUnity
         // return the online status
         public bool online()
         {
+#if NETFX_CORE
             return (bool) this.peer["online"];
+#else
+            return false;
+#endif
         }
 
+#if NETFX_CORE
         public void join(JObject room)
         {
-#if NETFX_CORE
             this.socket.Emit("join", room);
-#endif
         }
+#endif
 
+#if NETFX_CORE
         public void leave(JObject room)
         {
-#if NETFX_CORE
             this.socket.Emit("leave", room);
-#endif
         }
+#endif
 
+#if NETFX_CORE
         public void sendPresence(JObject p)
         {
             p = p ?? new JObject();
@@ -257,13 +267,15 @@ namespace WSAUnity
             }
             this.send(new SymplePresence(p));
         }
+#endif
 
         // send a message to the given peer
         // m = JSON object
         // to = either a string or a JSON object to build an address from
+#if NETFX_CORE
         public void send(JObject m, JToken to = null)
         {
-#if NETFX_CORE
+
             if (!this.online())
             {
                 throw new Exception("cannot send messages while offline"); // TODO: add to pending queue?
@@ -310,18 +322,22 @@ namespace WSAUnity
             Messenger.Broadcast(SympleLog.LogTrace, "symple:client: sending" + m);
             
             this.socket.Send(m);
-#endif
         }
+#endif
 
+#if NETFX_CORE
         public void respond(JObject m)
         {
             this.send(m, m["from"]);
         }
+#endif
 
+#if NETFX_CORE
         public void sendMessage(JObject m, JToken to)
         {
             this.send(m, to);
         }
+#endif
 
         // sets the client to an error state and disconnects
         public void setError(string error, string message = null)
@@ -337,6 +353,7 @@ namespace WSAUnity
 #endif
         }
 
+#if NETFX_CORE
         // extended dispatch function to handle filtered message response callbacks first, and then standard events
         private void dispatch(string eventLabel, params object[] arguments)
         {
@@ -345,7 +362,9 @@ namespace WSAUnity
                 base.dispatch(eventLabel, arguments);
             }
         }
+#endif
 
+#if NETFX_CORE
         private void sendCommand(JObject c, object to, Action<object> fn, bool once)
         {
             //c = new SympleCommand(c, to);
@@ -374,7 +393,9 @@ namespace WSAUnity
                 this.onResponse("command", filters, fn, after);
             }
         }
+#endif
 
+#if NETFX_CORE
         private void onResponse(string eventLabel, JObject filters, Action<object> fn, Action<object> after) {
             if (!this.listeners.ContainsKey(eventLabel))
             {
@@ -391,7 +412,9 @@ namespace WSAUnity
                 this.listeners[eventLabel].Add(listener);
             }
         }
+#endif
 
+#if NETFX_CORE
         // dispatch function for handling filtered message response callbacks
         private bool dispatchResponse(string eventLabel, params object[] arguments)
         {
@@ -428,5 +451,6 @@ namespace WSAUnity
             }
             return false;
         }
+#endif
     }
 }

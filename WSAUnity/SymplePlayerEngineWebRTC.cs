@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Diagnostics;
-using Newtonsoft.Json.Linq;
 
 #if NETFX_CORE
+using Newtonsoft.Json.Linq;
 using System.Threading.Tasks;
 using Org.WebRtc;
 #endif

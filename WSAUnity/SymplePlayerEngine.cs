@@ -2,9 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+#if NETFX_CORE
 using System.Threading.Tasks;
-using System.Diagnostics;
 using Newtonsoft.Json.Linq;
+#endif
+using System.Diagnostics;
+
 
 namespace WSAUnity
 {
@@ -27,13 +30,14 @@ namespace WSAUnity
         public abstract bool support();
         public abstract void setup();
         public abstract void destroy();
+#if NETFX_CORE
         public void play(JObject parameters)
         {
             Messenger.Broadcast(SympleLog.LogDebug, "symple:player:engine: play");
-#if NETFX_CORE
+
             _play(parameters);
-#endif
         }
+#endif
 
 #if NETFX_CORE
         public virtual async void _play(JObject parameters) { }

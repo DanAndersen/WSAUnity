@@ -4,10 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Diagnostics;
 
+#if NETFX_CORE
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-
-#if NETFX_CORE
 using System.Threading.Tasks;
 using Windows.Devices;
 using Org.WebRtc;
@@ -19,7 +18,9 @@ namespace WSAUnity
     {
         SymplePlayer player = null;
         SympleClient client = null;
+#if NETFX_CORE
         JObject remotePeer;
+#endif
         bool initialized = false;
         
         public void initAndStartWebRTC()
