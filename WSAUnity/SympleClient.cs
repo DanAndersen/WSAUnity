@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Diagnostics;
-using Quobject.SocketIoClientDotNet.Client;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 #if NETFX_CORE
+using Quobject.SocketIoClientDotNet.Client;
 using System.Threading.Tasks;
 #endif
 
@@ -15,16 +15,20 @@ namespace WSAUnity
 {
     public class SympleClient : SympleDispatcher
     {
+#if NETFX_CORE
         private Socket socket;
+        IO.Options ioOptions;
+#endif
         SympleRoster roster;
 
         JObject options;
 
-        IO.Options ioOptions;
+        
         JObject peer;
 
         public SympleClient(JObject options) : base()
         {
+#if NETFX_CORE
             this.options = options;
             options["url"] = options["url"] ?? "http://localhost:4000";
             options["secure"] = (options["url"] != null && (options["url"].ToString().IndexOf("https") == 0 || options["url"].ToString().IndexOf("wss") == 0));
@@ -37,18 +41,22 @@ namespace WSAUnity
 
             Uri socketUri = new Uri(options["url"].ToString());
 
+
             ioOptions = new IO.Options();
             ioOptions.Secure = (bool) options["secure"];
             ioOptions.Port = socketUri.Port;
             ioOptions.Hostname = socketUri.Host;
             ioOptions.IgnoreServerCertificateValidation = true;
 
+
             Messenger.Broadcast(SympleLog.LogTrace, "done initing SympleClient, values: ");
             Messenger.Broadcast(SympleLog.LogTrace, "this.peer: " + this.peer.ToString());
+#endif
         }
 
         public void connect()
         {
+#if NETFX_CORE
             Messenger.Broadcast(SympleLog.LogInfo, "symple:client: connecting");
 
             if (this.socket != null)
@@ -202,15 +210,18 @@ namespace WSAUnity
                 this.peer["online"] = false;
                 this.dispatch("disconnect");
             });
+#endif
         }
 
         // disconnect from the server
         public void disconnect()
         {
+#if NETFX_CORE
             if (this.socket != null)
             {
                 this.socket.Disconnect();
             }
+#endif
         }
 
         // return the online status
@@ -221,12 +232,16 @@ namespace WSAUnity
 
         public void join(JObject room)
         {
+#if NETFX_CORE
             this.socket.Emit("join", room);
+#endif
         }
 
         public void leave(JObject room)
         {
+#if NETFX_CORE
             this.socket.Emit("leave", room);
+#endif
         }
 
         public void sendPresence(JObject p)
@@ -248,6 +263,7 @@ namespace WSAUnity
         // to = either a string or a JSON object to build an address from
         public void send(JObject m, JToken to = null)
         {
+#if NETFX_CORE
             if (!this.online())
             {
                 throw new Exception("cannot send messages while offline"); // TODO: add to pending queue?
@@ -294,6 +310,7 @@ namespace WSAUnity
             Messenger.Broadcast(SympleLog.LogTrace, "symple:client: sending" + m);
             
             this.socket.Send(m);
+#endif
         }
 
         public void respond(JObject m)
@@ -309,6 +326,7 @@ namespace WSAUnity
         // sets the client to an error state and disconnects
         public void setError(string error, string message = null)
         {
+#if NETFX_CORE
             Messenger.Broadcast(SympleLog.LogError, "symple:client: fatal error " + error + " " + message);
 
             this.dispatch("error", error, message);
@@ -316,6 +334,7 @@ namespace WSAUnity
             {
                 this.socket.Disconnect();
             }
+#endif
         }
 
         // extended dispatch function to handle filtered message response callbacks first, and then standard events

@@ -38,10 +38,6 @@
       <HintPath>..\packages\Newtonsoft.Json.10.0.2\lib\net35\Newtonsoft.Json.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="SocketIoClientDotNet, Version=0.9.13.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\SocketIoClientDotNet.0.9.13\lib\net35\SocketIoClientDotNet.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Threading.Tasks.NET35, Version=3.0.2.0, Culture=neutral, processorArchitecture=MSIL">
@@ -75,9 +71,6 @@
     </Compile>
     <Compile Include="..\WSAUnity\SympleClient.cs">
       <Link>SympleClient.cs</Link>
-    </Compile>
-    <Compile Include="..\WSAUnity\SympleClientOptions.cs">
-      <Link>SympleClientOptions.cs</Link>
     </Compile>
     <Compile Include="..\WSAUnity\SympleCommand.cs">
       <Link>SympleCommand.cs</Link>
