@@ -26,6 +26,7 @@ namespace WSAUnity
         public void initAndStartWebRTC()
         {
 #if NETFX_CORE
+
             JObject CLIENT_OPTIONS = new JObject();
             CLIENT_OPTIONS["secure"] = true;
             CLIENT_OPTIONS["url"] = "https://andersed-talos.ddns.net:443";

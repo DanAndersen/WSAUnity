@@ -39,7 +39,6 @@ namespace WSAUnity
             Messenger.Broadcast(SympleLog.LogInfo, "symple:webrtc: init");
 
 #if NETFX_CORE
-
             WebRTC.Initialize(null);    // needed before calling any webrtc functions http://stackoverflow.com/questions/43331677/webrtc-for-uwp-new-rtcpeerconnection-doesnt-complete-execution
 
             if (player.options.rtcConfig != null)
@@ -65,9 +64,7 @@ namespace WSAUnity
             this.initiator = player.options.initiator;
 
 #if NETFX_CORE
-            // The `MediaStreamConstraints` object to pass to `getUserMedia`
-            this.userMediaConstraints = player.options.userMediaConstraints ?? new RTCMediaStreamConstraints() { audioEnabled = true, videoEnabled = true };
-
+            
             // Reference to the active local or remote media stream
             this.activeStream = null;
 #endif
@@ -130,16 +127,43 @@ namespace WSAUnity
                 // if we are the ICE initiator, then attempt to open the local video device and send the SDP offer to the peer
                 if (this.initiator)
                 {
-                    Messenger.Broadcast(SympleLog.LogInfo, "symple:webrtc: initiating " + this.userMediaConstraints);
-                    
-                    _media = Media.CreateMedia();
-                    
-                    MediaStream localStream = await _media.GetUserMedia(this.userMediaConstraints);
+                    Messenger.Broadcast(SympleLog.LogInfo, "symple:webrtc: initiating");
 
+                    _media = Media.CreateMedia();
+                    var videoCaptureDevices = _media.GetVideoCaptureDevices();
+
+                    Messenger.Broadcast(SympleLog.LogInfo, "videoCaptureDevices:");
+                    foreach (var dev in videoCaptureDevices)
+                    {
+                        Messenger.Broadcast(SympleLog.LogInfo, "id = " + dev.Id + ", name = " + dev.Name + ", location = " + dev.Location);
+                        var capabilities = await dev.GetVideoCaptureCapabilities();
+                        foreach (var capability in capabilities)
+                        {
+                            Messenger.Broadcast(SympleLog.LogInfo, "\t" + capability.FullDescription);
+                        }
+                    }
+                    _media.SelectVideoDevice(videoCaptureDevices[0]);
+
+                    //Org.WebRtc.Media.SetDisplayOrientation(Windows.Graphics.Display.DisplayOrientations.None);
+
+                    MediaStream localStream = await _media.GetUserMedia(new RTCMediaStreamConstraints { videoEnabled = true, audioEnabled = true });
+                    
                     Messenger.Broadcast(SympleLog.LogInfo, "localStream: " + localStream);
+                    var videoTracks = localStream.GetVideoTracks();
+                    Messenger.Broadcast(SympleLog.LogInfo, "videoTracks in localStream: ");
+                    foreach (var track in videoTracks)
+                    {
+                        Messenger.Broadcast(SympleLog.LogInfo, track.Id + ", enabled = " + track.Enabled + ", kind = " + track.Kind + ", suspended = " + track.Suspended);
+                    }
+                    var audioTracks = localStream.GetAudioTracks();
+                    Messenger.Broadcast(SympleLog.LogInfo, "audioTracks in localStream: ");
+                    foreach (var track in audioTracks)
+                    {
+                        Messenger.Broadcast(SympleLog.LogInfo, track.Id + ", enabled = " + track.Enabled + ", kind = " + track.Kind);
+                    }
 
                     // play the local video stream and create the SDP offer
-                    
+
                     this.pc.AddStream(localStream);
                     RTCSessionDescription desc = await this.pc.CreateOffer();
 
@@ -198,6 +222,14 @@ namespace WSAUnity
 
                 await this.pc.SetRemoteDescription(new RTCSessionDescription(sdpType, sdp));
                 Messenger.Broadcast(SympleLog.LogInfo, "symple:webrtc: sdp success");
+
+                if (sdpType == RTCSdpType.Offer)
+                {
+                    var answer = await this.pc.CreateAnswer();
+                    // assume success:
+                    this._onLocalSDP(answer);
+                }
+
             } catch (Exception e)
             {
                 Messenger.Broadcast(SympleLog.LogError, "symple:webrtc: sdp error: " + e);
