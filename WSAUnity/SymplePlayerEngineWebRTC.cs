@@ -4,17 +4,20 @@ using System.Linq;
 using System.Text;
 using System.Diagnostics;
 
+
 #if NETFX_CORE
 using Newtonsoft.Json.Linq;
 using System.Threading.Tasks;
 using Org.WebRtc;
+using Windows.Media.Playback;
+using Windows.Media.Core;
 #endif
 
 namespace WSAUnity
 {
     public class SymplePlayerEngineWebRTC : SymplePlayerEngine
     {
-
+        
         bool initiator;
 
 #if NETFX_CORE
@@ -117,6 +120,7 @@ namespace WSAUnity
             // if there is an active stream, play it now
             if (this.activeStream != null)
             {
+                Messenger.Broadcast(SympleLog.LogTrace, "symple:webrtc: active stream is not null, shuld play it now (TODO)");
                 //this.video.src = URL.createObjectURL(this.activeStream);
                 //this.video.play();
                 this.setState("playing");
@@ -142,12 +146,36 @@ namespace WSAUnity
                             Messenger.Broadcast(SympleLog.LogInfo, "\t" + capability.FullDescription);
                         }
                     }
+
+                    var videoDevice = videoCaptureDevices[0];
+
+                    Messenger.Broadcast(SympleLog.LogDebug, "getting videoCaptureCapabilities");
+                    var videoCaptureCapabilities = await videoDevice.GetVideoCaptureCapabilities();
+                    Messenger.Broadcast(SympleLog.LogDebug, "got videoCaptureCapabilities");
+
                     _media.SelectVideoDevice(videoCaptureDevices[0]);
+
+
+                    var chosenCapability = videoCaptureCapabilities[0];
+                    Messenger.Broadcast(SympleLog.LogDebug, "chosenCapability:");
+                    Messenger.Broadcast(SympleLog.LogDebug, "\tWidth: " + (int)chosenCapability.Width);
+                    Messenger.Broadcast(SympleLog.LogDebug, "\tHeight: " + (int)chosenCapability.Height);
+                    Messenger.Broadcast(SympleLog.LogDebug, "\tFrameRate: " + (int)chosenCapability.FrameRate);
+                    WebRTC.SetPreferredVideoCaptureFormat(896, 504, 29);
+
+
 
                     //Org.WebRtc.Media.SetDisplayOrientation(Windows.Graphics.Display.DisplayOrientations.None);
 
                     MediaStream localStream = await _media.GetUserMedia(new RTCMediaStreamConstraints { videoEnabled = true, audioEnabled = true });
-                    
+
+                    // play the local video stream and create the SDP offer
+
+                    this.pc.AddStream(localStream);
+
+
+                    Messenger.Broadcast(SympleLog.LogTrace, "symple:webrtc: should play the local stream and create the SDP offer (TODO)");
+
                     Messenger.Broadcast(SympleLog.LogInfo, "localStream: " + localStream);
                     var videoTracks = localStream.GetVideoTracks();
                     Messenger.Broadcast(SympleLog.LogInfo, "videoTracks in localStream: ");
@@ -162,9 +190,11 @@ namespace WSAUnity
                         Messenger.Broadcast(SympleLog.LogInfo, track.Id + ", enabled = " + track.Enabled + ", kind = " + track.Kind);
                     }
 
-                    // play the local video stream and create the SDP offer
 
-                    this.pc.AddStream(localStream);
+                    var source = _media.CreateMediaSource(videoTracks[0], Symple.LocalMediaStreamId);
+
+                    Messenger.Broadcast(SympleLog.MediaSource, source);
+                    
                     RTCSessionDescription desc = await this.pc.CreateOffer();
 
                     Messenger.Broadcast(SympleLog.LogDebug, "symple:webrtc: offer: " + desc);
@@ -180,6 +210,20 @@ namespace WSAUnity
         private async void _onLocalSDP(RTCSessionDescription desc) {
             try
             {
+                Messenger.Broadcast(SympleLog.LogTrace, "symple:webrtc: _onLocalSDP");
+
+                string localSdp = desc.Sdp;
+                Messenger.Broadcast(SympleLog.LogTrace, "symple:webrtc: localSdp = " + localSdp);
+
+                List<int> localVideoCodecIds = Symple.GetVideoCodecIds(localSdp);
+                string logMsg = "localVideoCodecIds: ";
+                foreach (var videoCodecId in localVideoCodecIds)
+                {
+                    logMsg += videoCodecId + " ";
+                }
+                Messenger.Broadcast(SympleLog.LogTrace, "symple:webrtc: " + logMsg);
+
+
                 await this.pc.SetLocalDescription(desc);
                 this.sendLocalSDP(desc);
             } catch (Exception e)
@@ -295,6 +339,7 @@ namespace WSAUnity
                 this.setState("playing");
 
                 // ====== here we would play the video element ======
+                Messenger.Broadcast(SympleLog.LogTrace, "symple:webrtc: remote stream added, should play it now (TODO)");
                 //this.video.src = objectURL;
                 //this.video.play();
 

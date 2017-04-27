@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 #if NETFX_CORE
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
@@ -19,6 +20,9 @@ namespace WSAUnity
             return (peer["user"] != null ? (peer["user"] + "|") : "") + (peer["id"] != null ? peer["id"] : "");
         }
 #endif
+
+        public const string LocalMediaStreamId = "LOCAL";
+
 
         private static Random random = new Random();
 
@@ -117,5 +121,26 @@ namespace WSAUnity
             return result;
         }
 #endif
+
+
+        public static List<int> GetVideoCodecIds(string sdp)
+        {
+            var mfdRegex = new Regex("\r\nm=video.*RTP.*?( .\\d*)+\r\n");
+            var mfdMatch = mfdRegex.Match(sdp);
+            var mfdList = new List<int>(); //mdf = media format descriptor
+            var videoMediaDescFound = mfdMatch.Groups.Count > 1; //Group 0 is whole match
+            if (videoMediaDescFound)
+            {
+                for (var groupCtr = 1 /*Group 0 is whole match*/; groupCtr < mfdMatch.Groups.Count; groupCtr++)
+                {
+                    for (var captureCtr = 0; captureCtr < mfdMatch.Groups[groupCtr].Captures.Count; captureCtr++)
+                    {
+                        string codecId = mfdMatch.Groups[groupCtr].Captures[captureCtr].Value.TrimStart();
+                        mfdList.Add(int.Parse(codecId));
+                    }
+                }
+            }
+            return mfdList;
+        }
     }
 }

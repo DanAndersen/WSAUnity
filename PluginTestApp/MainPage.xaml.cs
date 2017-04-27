@@ -16,7 +16,8 @@ using System.Diagnostics;
 
 using Org.WebRtc;
 using Windows.UI.Core;
-
+using Windows.Media.Playback;
+using Windows.Media.Core;
 using WSAUnity;
 
 // The Blank Page item template is documented at http://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
@@ -29,17 +30,32 @@ namespace PluginTestApp
     public sealed partial class MainPage : Page
     {
         Plugin p;
-        
+        MediaPlayer _mediaPlayer;
+
         public MainPage()
         {
             this.InitializeComponent();
 
+            Debug.WriteLine("MainPage()");
+
+            _mediaPlayer = new MediaPlayer();
+            mediaPlayerElement.SetMediaPlayer(_mediaPlayer);
+            
             p = new Plugin();
 
             Messenger.AddListener<string>(SympleLog.LogTrace, OnLog);
             Messenger.AddListener<string>(SympleLog.LogDebug, OnLog);
             Messenger.AddListener<string>(SympleLog.LogInfo, OnLog);
             Messenger.AddListener<string>(SympleLog.LogError, OnLog);
+
+            Messenger.AddListener<IMediaSource>(SympleLog.MediaSource, OnMediaSource);
+        }
+
+        private void OnMediaSource(IMediaSource source)
+        {
+            Messenger.Broadcast(SympleLog.LogDebug, "OnMediaSource");
+            _mediaPlayer.Source = MediaSource.CreateFromIMediaSource(source);
+            _mediaPlayer.Play();
         }
 
         private void OnLog(string msg)
@@ -59,11 +75,14 @@ namespace PluginTestApp
         
         
 
-        private void button_Click(object sender, RoutedEventArgs e)
+        private async void button_Click(object sender, RoutedEventArgs e)
         {
             button.IsEnabled = false;
 
             p.initAndStartWebRTC();
+
+            
+            //p.basicTestVideo();
         }
     }
 }

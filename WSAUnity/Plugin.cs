@@ -149,6 +149,51 @@ namespace WSAUnity
         }
 
 
+#if NETFX_CORE
+        public async void basicTestVideo()
+        {
+            Messenger.Broadcast(SympleLog.LogDebug, "basicTestVideo()");
+
+            WebRTC.Initialize(null);    // needed before calling any webrtc functions http://stackoverflow.com/questions/43331677/webrtc-for-uwp-new-rtcpeerconnection-doesnt-complete-execution
+
+            Messenger.Broadcast(SympleLog.LogDebug, "creating media");
+            Media media = Media.CreateMedia();
+            media.OnMediaDevicesChanged += (MediaDeviceType mediaType) =>
+            {
+                Messenger.Broadcast(SympleLog.LogDebug, "OnMediaDevicesChanged(), mediaType = " + mediaType);
+            };
+            Messenger.Broadcast(SympleLog.LogDebug, "created media");
+
+            var videoCaptureDevices = media.GetVideoCaptureDevices();
+            Messenger.Broadcast(SympleLog.LogDebug, "num videoCaptureDevices: " + videoCaptureDevices.Count);
+
+            var videoDevice = videoCaptureDevices[0];
+
+            Messenger.Broadcast(SympleLog.LogDebug, "getting videoCaptureCapabilities");
+            var videoCaptureCapabilities = await videoDevice.GetVideoCaptureCapabilities();
+            Messenger.Broadcast(SympleLog.LogDebug, "got videoCaptureCapabilities");
+
+            var chosenCapability = videoCaptureCapabilities[0];
+            Messenger.Broadcast(SympleLog.LogDebug, "chosenCapability:");
+            Messenger.Broadcast(SympleLog.LogDebug, "\tWidth: " + (int)chosenCapability.Width);
+            Messenger.Broadcast(SympleLog.LogDebug, "\tHeight: " + (int)chosenCapability.Height);
+            Messenger.Broadcast(SympleLog.LogDebug, "\tFrameRate: " + (int)chosenCapability.FrameRate);
+            WebRTC.SetPreferredVideoCaptureFormat((int)chosenCapability.Width, (int)chosenCapability.Height, (int)chosenCapability.FrameRate);
+
+            Messenger.Broadcast(SympleLog.LogDebug, "getting usermedia");
+            MediaStream localStream = await media.GetUserMedia(new RTCMediaStreamConstraints { videoEnabled = true, audioEnabled = true });
+            Messenger.Broadcast(SympleLog.LogDebug, "got usermedia");
+
+            var videoTracks = localStream.GetVideoTracks();
+            Messenger.Broadcast(SympleLog.LogDebug, "num videoTracks: " + videoTracks.Count);
+
+            var source = media.CreateMediaSource(videoTracks[0], Symple.LocalMediaStreamId);
+            Messenger.Broadcast(SympleLog.LogDebug, "created mediasource");
+
+            Messenger.Broadcast(SympleLog.MediaSource, source);
+        }
+#endif
+
 
 
         private void startPlaybackAndRecording()

@@ -21,5 +21,7 @@ namespace WSAUnity
         public const string ConnectFailed = "connect_failed";
         public const string Disconnect = "disconnect";
         public const string StateChanged = "state_changed";
+
+        public const string MediaSource = "media_source";
     }
 }
