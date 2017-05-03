@@ -155,15 +155,33 @@ namespace WSAUnity
 
                     _media.SelectVideoDevice(videoCaptureDevices[0]);
 
-
+                    
+                    // We need to specify a preferred video capture format; it has to be one of the supported capabilities of the device.
+                    // We will choose the capability that has the lowest resolution and the highest frame rate for that resolution.
                     var chosenCapability = videoCaptureCapabilities[0];
+                    foreach (var capability in videoCaptureCapabilities)
+                    {
+                        if (capability.Width == 640 && capability.Height == 480)
+                        {
+                            // we'd prefer to just do 640x480 if possible
+                            chosenCapability = capability;
+                            break;
+                        }
+
+                        if ( (capability.Width < chosenCapability.Width && capability.Height < chosenCapability.Height) ||
+                            (capability.Width == chosenCapability.Width && capability.Height == chosenCapability.Height && capability.FrameRate > chosenCapability.FrameRate) )
+                        {
+                            chosenCapability = capability;
+                        }
+                    }
+                    
                     Messenger.Broadcast(SympleLog.LogDebug, "chosenCapability:");
                     Messenger.Broadcast(SympleLog.LogDebug, "\tWidth: " + (int)chosenCapability.Width);
                     Messenger.Broadcast(SympleLog.LogDebug, "\tHeight: " + (int)chosenCapability.Height);
                     Messenger.Broadcast(SympleLog.LogDebug, "\tFrameRate: " + (int)chosenCapability.FrameRate);
-                    WebRTC.SetPreferredVideoCaptureFormat(896, 504, 29);
-
-
+                    WebRTC.SetPreferredVideoCaptureFormat((int)chosenCapability.Width, (int)chosenCapability.Height, (int)chosenCapability.FrameRate);
+                    
+                    //WebRTC.SetPreferredVideoCaptureFormat(640, 480, 30);
 
                     //Org.WebRtc.Media.SetDisplayOrientation(Windows.Graphics.Display.DisplayOrientations.None);
 
