@@ -136,7 +136,7 @@ namespace WSAUnity
                                     this.roster.remove((string)m["data"]["id"]);
                                 }
 
-                                if ((bool)m["probe"])
+                                if (m["probe"] != null && (bool)m["probe"] == true)
                                 {
                                     JObject presenceTo = new JObject();
                                     presenceTo["to"] = Symple.parseAddress(m["from"].ToString())["id"];
