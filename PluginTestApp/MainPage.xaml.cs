@@ -43,7 +43,8 @@ namespace PluginTestApp
             
             p = new Plugin();
 
-            Messenger.AddListener<string>(SympleLog.LogTrace, OnLog);
+            // comment these out if not needed
+            //Messenger.AddListener<string>(SympleLog.LogTrace, OnLog);
             Messenger.AddListener<string>(SympleLog.LogDebug, OnLog);
             Messenger.AddListener<string>(SympleLog.LogInfo, OnLog);
             Messenger.AddListener<string>(SympleLog.LogError, OnLog);
