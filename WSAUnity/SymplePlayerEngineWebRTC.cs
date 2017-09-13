@@ -65,6 +65,7 @@ namespace WSAUnity
             // Specifies that this client will be the ICE initiator,
             // and will be sending the initial SDP Offer.
             this.initiator = player.options.initiator;
+            Messenger.Broadcast(SympleLog.LogInfo, "symple:webrtc: constructor, set this.initiator to " + this.initiator);
 
 #if NETFX_CORE
             
@@ -311,7 +312,7 @@ namespace WSAUnity
             string candidate = (string) candidateParams["candidate"];
             string sdpMid = (string) candidateParams["sdpMid"];
             ushort sdpMLineIndex = (ushort) candidateParams["sdpMLineIndex"];
-
+            
             await this.pc.AddIceCandidate(new RTCIceCandidate(candidate, sdpMid, sdpMLineIndex));
         }
 

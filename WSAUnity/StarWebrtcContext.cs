@@ -97,7 +97,19 @@ namespace WSAUnity
 
             SymplePlayerOptions playerOptions = new SymplePlayerOptions();
             playerOptions.engine = "WebRTC";
-            playerOptions.initiator = true;
+
+            switch (UserType)
+            {
+                case StarUserType.TRAINEE:
+                    playerOptions.initiator = true;
+                    break;
+                case StarUserType.MENTOR:
+                    playerOptions.initiator = false;
+                    break;
+                default:
+                    break;
+            }
+            
 
             // WebRTC config
             // This is where you would add TURN servers for use in production
@@ -112,7 +124,7 @@ namespace WSAUnity
                     new RTCIceServer { Url = "turn:numb.viagenie.ca", Username = "purduestarproj@gmail.com", Credential = "0O@S&YfP$@56" }
                 }
             };
-
+            
             playerOptions.rtcConfig = WEBRTC_CONFIG;
             //playerOptions.iceMediaConstraints = asdf; // TODO: not using iceMediaConstraints in latest code?
             playerOptions.onStateChange = (player, state, message) =>
@@ -150,9 +162,21 @@ namespace WSAUnity
                 
             });
 
-            client.on("removePeer", (peer) =>
+            client.on("presence", (presence) =>
             {
+                Messenger.Broadcast(SympleLog.LogInfo, "Recv presence: " + presence);
+            });
+
+            client.on("removePeer", (peerObj) =>
+            {
+                JObject peer = (JObject)peerObj;
+
                 Messenger.Broadcast(SympleLog.LogInfo, "Removing peer: " + peer);
+
+                if (remotePeer != null && remotePeer["id"].Equals(peer["id"]))
+                {
+                    remotePeer = null;
+                }
             });
 
             client.on("message", (mObj) =>
@@ -180,18 +204,96 @@ namespace WSAUnity
                 }
                 if (m["offer"] != null)
                 {
-                    Messenger.Broadcast(SympleLog.LogInfo, "Unexpected offer for one-way streaming");
+                    switch (UserType)
+                    {
+                        case StarUserType.TRAINEE:
+                            Messenger.Broadcast(SympleLog.LogInfo, "Unexpected offer for one-way streaming");
+                            break;
+                        case StarUserType.MENTOR:
+
+                            Messenger.Broadcast(SympleLog.LogInfo, "Receive offer: " + m["offer"]);
+
+                            remotePeer = (JObject)m["from"];
+
+                            JObject playParams = new JObject();   // empty params
+                            player.play(playParams);
+
+                            var engine = (SymplePlayerEngineWebRTC)player.engine;
+
+                            engine.recvRemoteSDP((JObject)m["offer"]);
+
+                            engine.sendLocalSDP = (desc) =>
+                            {
+                                Messenger.Broadcast(SympleLog.LogInfo, "Send answer: " + desc);
+
+                                JObject sessionDesc = new JObject();
+                                sessionDesc["sdp"] = desc.Sdp;
+                                if (desc.Type == Org.WebRtc.RTCSdpType.Answer)
+                                {
+                                    sessionDesc["type"] = "answer";
+                                }
+                                else if (desc.Type == Org.WebRtc.RTCSdpType.Offer)
+                                {
+                                    sessionDesc["type"] = "offer";
+                                }
+                                else if (desc.Type == Org.WebRtc.RTCSdpType.Pranswer)
+                                {
+                                    sessionDesc["type"] = "pranswer";
+                                }
+
+                                JObject parameters = new JObject();
+                                parameters["to"] = remotePeer;
+                                parameters["type"] = "message";
+                                parameters["answer"] = sessionDesc;
+
+                                client.send(parameters);
+                            };
+
+                            engine.sendLocalCandidate = (cand) =>
+                            {
+                                JObject candidateObj = new JObject();
+                                candidateObj["candidate"] = cand.Candidate;
+                                candidateObj["sdpMid"] = cand.SdpMid;
+                                candidateObj["sdpMLineIndex"] = cand.SdpMLineIndex;
+
+                                JObject parameters = new JObject();
+                                parameters["to"] = remotePeer;
+                                parameters["type"] = "message";
+                                parameters["candidate"] = candidateObj;
+
+                                client.send(parameters);
+                            };
+
+                            break;
+                        default:
+                            break;
+                    }
+                    
                 }
                 else if (m["answer"] != null)
                 {
-                    SymplePlayerEngineWebRTC engine = (SymplePlayerEngineWebRTC)player.engine;
+                    switch (UserType)
+                    {
+                        case StarUserType.TRAINEE:
 
-                    string answerJsonString = JsonConvert.SerializeObject(m["answer"], Formatting.None);
+                            SymplePlayerEngineWebRTC engine = (SymplePlayerEngineWebRTC)player.engine;
 
-                    JObject answerParams = (JObject)m["answer"];
+                            string answerJsonString = JsonConvert.SerializeObject(m["answer"], Formatting.None);
 
-                    Messenger.Broadcast(SympleLog.LogTrace, "Receive answer: " + answerJsonString);
-                    engine.recvRemoteSDP(answerParams);
+                            JObject answerParams = (JObject)m["answer"];
+
+                            Messenger.Broadcast(SympleLog.LogTrace, "Receive answer: " + answerJsonString);
+                            engine.recvRemoteSDP(answerParams);
+
+                            break;
+                        case StarUserType.MENTOR:
+
+                            Messenger.Broadcast(SympleLog.LogInfo, "Unexpected answer for one-way streaming");
+
+                            break;
+                        default:
+                            break;
+                    }                    
                 }
                 else if (m["candidate"] != null)
                 {
@@ -199,6 +301,7 @@ namespace WSAUnity
 
                     JObject candidateParams = (JObject)m["candidate"];
 
+                    Messenger.Broadcast(SympleLog.LogInfo, "Using Candidate: " + candidateParams);
                     engine.recvRemoteCandidate(candidateParams);
                 }
             });

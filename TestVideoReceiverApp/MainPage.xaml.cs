@@ -22,7 +22,7 @@ using WSAUnity;
 
 // The Blank Page item template is documented at http://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
 
-namespace PluginTestApp
+namespace TestVideoReceiverApp
 {
     /// <summary>
     /// An empty page that can be used on its own or navigated to within a Frame.
@@ -41,7 +41,7 @@ namespace PluginTestApp
             _mediaPlayer = new MediaPlayer();
             mediaPlayerElement.SetMediaPlayer(_mediaPlayer);
 
-            starWebrtcContext = StarWebrtcContext.CreateTraineeContext();
+            starWebrtcContext = StarWebrtcContext.CreateMentorContext();
             // right after creating the context (before starting the connections), we could edit some parameters such as the signalling server
 
             // comment these out if not needed
@@ -72,10 +72,8 @@ namespace PluginTestApp
                 textBox.Text += msg + "\n";
             }
             );
-            
+
         }
-        
-        
 
         private async void button_Click(object sender, RoutedEventArgs e)
         {
