@@ -56,8 +56,13 @@ namespace TestVideoReceiverApp
         private void OnMediaSource(IMediaSource source)
         {
             Messenger.Broadcast(SympleLog.LogDebug, "OnMediaSource");
-            _mediaPlayer.Source = MediaSource.CreateFromIMediaSource(source);
-            _mediaPlayer.Play();
+            Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal,
+            () =>
+            {
+                _mediaPlayer.Source = MediaSource.CreateFromIMediaSource(source);
+                _mediaPlayer.Play();
+            }
+            );
         }
 
         private void OnLog(string msg)

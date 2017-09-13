@@ -20,6 +20,8 @@ namespace WSAUnity
         
         bool initiator;
 
+        const string RemotePeerVideoTrackId = "remote_peer_video_track_id";
+
 #if NETFX_CORE
         private RTCConfiguration rtcConfig;
         private RTCPeerConnection pc;
@@ -73,6 +75,18 @@ namespace WSAUnity
             this.activeStream = null;
 #endif
         }
+
+
+#if NETFX_CORE
+        private Media GetMedia()
+        {
+            if (_media == null)
+            {
+                _media = Media.CreateMedia();
+            }
+            return _media;
+        }
+#endif
 
         public override void setup()
         {
@@ -134,8 +148,7 @@ namespace WSAUnity
                 {
                     Messenger.Broadcast(SympleLog.LogInfo, "symple:webrtc: initiating");
 
-                    _media = Media.CreateMedia();
-                    var videoCaptureDevices = _media.GetVideoCaptureDevices();
+                    var videoCaptureDevices = GetMedia().GetVideoCaptureDevices();
 
                     Messenger.Broadcast(SympleLog.LogInfo, "videoCaptureDevices:");
                     foreach (var dev in videoCaptureDevices)
@@ -154,7 +167,7 @@ namespace WSAUnity
                     var videoCaptureCapabilities = await videoDevice.GetVideoCaptureCapabilities();
                     Messenger.Broadcast(SympleLog.LogDebug, "got videoCaptureCapabilities");
 
-                    _media.SelectVideoDevice(videoCaptureDevices[0]);
+                    GetMedia().SelectVideoDevice(videoCaptureDevices[0]);
 
                     
                     // We need to specify a preferred video capture format; it has to be one of the supported capabilities of the device.
@@ -186,7 +199,7 @@ namespace WSAUnity
 
                     //Org.WebRtc.Media.SetDisplayOrientation(Windows.Graphics.Display.DisplayOrientations.None);
 
-                    MediaStream localStream = await _media.GetUserMedia(new RTCMediaStreamConstraints { videoEnabled = true, audioEnabled = true });
+                    MediaStream localStream = await GetMedia().GetUserMedia(new RTCMediaStreamConstraints { videoEnabled = true, audioEnabled = true });
 
                     // play the local video stream and create the SDP offer
 
@@ -209,18 +222,24 @@ namespace WSAUnity
                         Messenger.Broadcast(SympleLog.LogInfo, track.Id + ", enabled = " + track.Enabled + ", kind = " + track.Kind);
                     }
 
+                    if (videoTracks.Count > 0)
+                    {
+                        var source = GetMedia().CreateMediaSource(videoTracks[0], Symple.LocalMediaStreamId);
 
-                    var source = _media.CreateMediaSource(videoTracks[0], Symple.LocalMediaStreamId);
+                        Messenger.Broadcast(SympleLog.MediaSource, source);
 
-                    Messenger.Broadcast(SympleLog.MediaSource, source);
+                        RTCSessionDescription desc = await this.pc.CreateOffer();
+
+                        Messenger.Broadcast(SympleLog.LogDebug, "symple:webrtc: offer: " + desc);
+                        this._onLocalSDP(desc);
+
+                        // store the active local stream
+                        this.activeStream = localStream;
+                    } else
+                    {
+                        Messenger.Broadcast(SympleLog.LogError, "ERROR: No video track found locally");
+                    }
                     
-                    RTCSessionDescription desc = await this.pc.CreateOffer();
-
-                    Messenger.Broadcast(SympleLog.LogDebug, "symple:webrtc: offer: " + desc);
-                    this._onLocalSDP(desc);
-
-                    // store the active local stream
-                    this.activeStream = localStream;
                 }
             }
         }
@@ -359,8 +378,17 @@ namespace WSAUnity
 
                 // ====== here we would play the video element ======
                 Messenger.Broadcast(SympleLog.LogTrace, "symple:webrtc: remote stream added, should play it now (TODO)");
-                //this.video.src = objectURL;
-                //this.video.play();
+
+                MediaVideoTrack peerVideoTrack = mediaStreamEvent.Stream.GetVideoTracks().FirstOrDefault();
+                if (peerVideoTrack != null)
+                {
+                    IMediaSource mediaSource = GetMedia().CreateMediaSource(peerVideoTrack, RemotePeerVideoTrackId);
+                    Messenger.Broadcast(SympleLog.LogInfo, "Created video source for remote peer video");
+                    Messenger.Broadcast(SympleLog.MediaSource, mediaSource);
+                } else
+                {
+                    Messenger.Broadcast(SympleLog.LogError, "ERROR: Received remote media stream, but there was no video track");
+                }
 
                 // store the active stream
                 this.activeStream = mediaStreamEvent.Stream;
