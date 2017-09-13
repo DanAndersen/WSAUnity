@@ -14,8 +14,68 @@ using Org.WebRtc;
 
 namespace WSAUnity
 {
-    public class Plugin
+    public class StarWebrtcContext
     {
+        public enum StarUserType
+        {
+            TRAINEE,
+            MENTOR
+        }
+
+        public StarUserType UserType { get; private set; }
+
+        /// <summary>
+        /// The WebRTC signalling server used by all peers to coordinate connections with each other.
+        /// </summary>
+        public string SignallingServerUrl { get; set; } = "https://purduestarproj-webrtc-signal.herokuapp.com";
+
+        /// <summary>
+        /// TRAINEE only: The peer username of the remote mentor user that this context will wait for.
+        /// Once another peer with this name connects, the TRAINEE context will automatically start sending video to that peer.
+        /// </summary>
+        public string ExpectedRemoteReceiverUsername { get; set; } = "star-mentor";
+
+        /// <summary>
+        /// The username that this peer is known by in the WebRTC signalling server.
+        /// </summary>
+        public string LocalPeerUsername { get; private set; }
+
+        /// <summary>
+        /// The full name (purely cosmetic) that this peer is known by in the WebRTC signalling server.
+        /// </summary>
+        public string LocalPeerNameLabel { get; set; }
+
+        public string LocalPeerGroup { get; set; } = "public";
+        
+        public static StarWebrtcContext CreateTraineeContext()
+        {
+            StarWebrtcContext ctx = new StarWebrtcContext();
+            ctx.UserType = StarUserType.TRAINEE;
+            ctx.LocalPeerUsername = "star-trainee";
+            ctx.LocalPeerNameLabel = "STAR Trainee";
+            ctx.ExpectedRemoteReceiverUsername = "star-mentor";
+
+            return ctx;
+        }
+
+        public static StarWebrtcContext CreateMentorContext(string overrideLocalPeerUsername = null)
+        {
+            StarWebrtcContext ctx = new StarWebrtcContext();
+            ctx.UserType = StarUserType.MENTOR;
+            ctx.LocalPeerUsername = "star-mentor";
+            ctx.LocalPeerNameLabel = "STAR Mentor";
+
+            return ctx;
+        }
+
+
+        private StarWebrtcContext()
+        {
+
+        }
+
+
+
         SymplePlayer player = null;
         SympleClient client = null;
 #if NETFX_CORE
@@ -29,11 +89,11 @@ namespace WSAUnity
 
             JObject CLIENT_OPTIONS = new JObject();
             CLIENT_OPTIONS["secure"] = true;
-            CLIENT_OPTIONS["url"] = "https://andersed-talos.ddns.net:443";
+            CLIENT_OPTIONS["url"] = this.SignallingServerUrl;
             CLIENT_OPTIONS["peer"] = new JObject();
-            CLIENT_OPTIONS["peer"]["user"] = "demo";
-            CLIENT_OPTIONS["peer"]["name"] = "Demo User";
-            CLIENT_OPTIONS["peer"]["group"] = "public";
+            CLIENT_OPTIONS["peer"]["user"] = this.LocalPeerUsername;
+            CLIENT_OPTIONS["peer"]["name"] = this.LocalPeerNameLabel;
+            CLIENT_OPTIONS["peer"]["group"] = this.LocalPeerGroup;
 
             SymplePlayerOptions playerOptions = new SymplePlayerOptions();
             playerOptions.engine = "WebRTC";
@@ -44,8 +104,13 @@ namespace WSAUnity
             RTCConfiguration WEBRTC_CONFIG = new RTCConfiguration
             {
                 IceServers = new List<RTCIceServer> {
-                new RTCIceServer { Url = "stun:stun.l.google.com:19302", Username = string.Empty, Credential = string.Empty }
-            }
+                    new RTCIceServer { Url = "stun:stun.l.google.com:19302", Username = string.Empty, Credential = string.Empty },
+                    new RTCIceServer { Url = "stun:stun1.l.google.com:19302", Username = string.Empty, Credential = string.Empty },
+                    new RTCIceServer { Url = "stun:stun2.l.google.com:19302", Username = string.Empty, Credential = string.Empty },
+                    new RTCIceServer { Url = "stun:stun3.l.google.com:19302", Username = string.Empty, Credential = string.Empty },
+                    new RTCIceServer { Url = "stun:stun4.l.google.com:19302", Username = string.Empty, Credential = string.Empty },
+                    new RTCIceServer { Url = "turn:numb.viagenie.ca", Username = "purduestarproj@gmail.com", Credential = "0O@S&YfP$@56" }
+                }
             };
 
             playerOptions.rtcConfig = WEBRTC_CONFIG;
@@ -71,12 +136,18 @@ namespace WSAUnity
 
                 Messenger.Broadcast(SympleLog.LogInfo, "adding peer: " + peer);
 
-                if ((string)peer["user"] == "videorecorder" && !initialized)
+                if (this.UserType == StarUserType.TRAINEE)
                 {
-                    initialized = true;
-                    remotePeer = peer;
-                    startPlaybackAndRecording();
+                    // the TRAINEE user waits for a peer with a specific username, then once it's connected it automatically starts sending video
+
+                    if ((string)peer["user"] == this.ExpectedRemoteReceiverUsername && !initialized)
+                    {
+                        initialized = true;
+                        remotePeer = peer;
+                        startPlaybackAndRecording();
+                    }
                 }
+                
             });
 
             client.on("removePeer", (peer) =>

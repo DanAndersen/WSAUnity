@@ -110,7 +110,7 @@
     <Compile Include="JObjectWithActions.cs" />
     <Compile Include="Callback.cs" />
     <Compile Include="Messenger.cs" />
-    <Compile Include="Plugin.cs" />
+    <Compile Include="StarWebrtcContext.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Symple.cs" />
     <Compile Include="SympleClient.cs" />

@@ -47,8 +47,8 @@
     <Compile Include="..\WSAUnity\Messenger.cs">
       <Link>Messenger.cs</Link>
     </Compile>
-    <Compile Include="..\WSAUnity\Plugin.cs">
-      <Link>Plugin.cs</Link>
+    <Compile Include="..\WSAUnity\StarWebrtcContext.cs">
+      <Link>StarWebrtcContext.cs</Link>
     </Compile>
     <Compile Include="..\WSAUnity\Symple.cs">
       <Link>Symple.cs</Link>

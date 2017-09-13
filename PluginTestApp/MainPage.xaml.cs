@@ -29,7 +29,7 @@ namespace PluginTestApp
     /// </summary>
     public sealed partial class MainPage : Page
     {
-        Plugin p;
+        StarWebrtcContext starWebrtcContext;
         MediaPlayer _mediaPlayer;
 
         public MainPage()
@@ -40,8 +40,9 @@ namespace PluginTestApp
 
             _mediaPlayer = new MediaPlayer();
             mediaPlayerElement.SetMediaPlayer(_mediaPlayer);
-            
-            p = new Plugin();
+
+            starWebrtcContext = StarWebrtcContext.CreateTraineeContext();
+            // right after creating the context (before starting the connections), we could edit some parameters such as the signalling server
 
             // comment these out if not needed
             //Messenger.AddListener<string>(SympleLog.LogTrace, OnLog);
@@ -80,7 +81,7 @@ namespace PluginTestApp
         {
             button.IsEnabled = false;
 
-            p.initAndStartWebRTC();
+            starWebrtcContext.initAndStartWebRTC();
 
             
             //p.basicTestVideo();

@@ -10,7 +10,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WSAStub", "WSAStub\WSAStub.
 		{5635CF03-FD91-43F0-B839-94D9E9F7816E} = {5635CF03-FD91-43F0-B839-94D9E9F7816E}
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PluginTestApp", "PluginTestApp\PluginTestApp.csproj", "{A251F0C9-89C8-4D87-90E5-467808BE021C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestVideoSenderApp", "PluginTestApp\TestVideoSenderApp.csproj", "{A251F0C9-89C8-4D87-90E5-467808BE021C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
