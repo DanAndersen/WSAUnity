@@ -59,7 +59,8 @@ namespace TestVideoReceiverApp
             Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal,
             () =>
             {
-                _mediaPlayer.Source = MediaSource.CreateFromIMediaSource(source);
+                var createdSource = MediaSource.CreateFromIMediaSource(source);
+                _mediaPlayer.Source = createdSource;
                 _mediaPlayer.Play();
             }
             );

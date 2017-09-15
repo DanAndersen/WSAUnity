@@ -9,6 +9,8 @@
 
     <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
         <Button x:Name="button" Content="Init and Start WebRTC" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Click="button_Click"/>
+        <Button x:Name="testStartLocalVideoButton" Content="testStartLocalVideo" HorizontalAlignment="Left" Margin="200,10,0,0" VerticalAlignment="Top" Click="testStartLocalVideoButton_Click"/>
+        <Button x:Name="testDisconnectLocalVideoButton" Content="testDisconnectLocalVideo" HorizontalAlignment="Left" Margin="400,10,0,0" VerticalAlignment="Top" Click="testDisconnectLocalVideoButton_Click"/>
         <TextBox x:Name="textBox" HorizontalAlignment="Left" Margin="10,47,0,0" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Height="583" Width="340"/>
 
         <MediaPlayerElement x:Name="mediaPlayerElement" AreTransportControlsEnabled="False" Margin="355,47,811,609" />

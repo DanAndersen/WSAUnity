@@ -22,6 +22,8 @@ namespace WSAUnity
         public const string Disconnect = "disconnect";
         public const string StateChanged = "state_changed";
 
-        public const string MediaSource = "media_source";
+        public const string CreatedMediaSource = "created_media_source";
+
+        public const string DestroyedMediaSource = "destroyed_media_source";
     }
 }

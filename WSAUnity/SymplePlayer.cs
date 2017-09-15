@@ -30,7 +30,7 @@ namespace WSAUnity
 
         public SymplePlayerOptions options { get; }
 
-        public SymplePlayerEngine engine { get; private set; }
+        public SymplePlayerEngine engine { get; set; }
 
         public SymplePlayer(SymplePlayerOptions opts)
         {

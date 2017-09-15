@@ -23,11 +23,13 @@ namespace WSAUnity
         const string RemotePeerVideoTrackId = "remote_peer_video_track_id";
 
 #if NETFX_CORE
+        private bool webrtcInitialized = false;
         private RTCConfiguration rtcConfig;
         private RTCPeerConnection pc;
         private MediaStream activeStream;
         private Media _media;
         private RTCMediaStreamConstraints userMediaConstraints;
+        private MediaStream _localStream;   // hold onto a reference to the local stream even if remote user disconnects
 #endif
 
         public override bool support()
@@ -44,7 +46,12 @@ namespace WSAUnity
             Messenger.Broadcast(SympleLog.LogInfo, "symple:webrtc: init");
 
 #if NETFX_CORE
-            WebRTC.Initialize(null);    // needed before calling any webrtc functions http://stackoverflow.com/questions/43331677/webrtc-for-uwp-new-rtcpeerconnection-doesnt-complete-execution
+            if (!webrtcInitialized)
+            {
+                WebRTC.Initialize(null);    // needed before calling any webrtc functions http://stackoverflow.com/questions/43331677/webrtc-for-uwp-new-rtcpeerconnection-doesnt-complete-execution
+                webrtcInitialized = true;
+            }
+            
 
             if (player.options.rtcConfig != null)
             {
@@ -106,6 +113,16 @@ namespace WSAUnity
 #if NETFX_CORE
             this.sendLocalSDP = null;
             this.sendLocalCandidate = null;
+
+            /*
+            if (this.pc != null && this.activeStream != null)
+            {
+                this.pc.RemoveStream(this.activeStream);
+            }
+            */
+
+            Messenger.Broadcast(SympleLog.DestroyedMediaSource);
+
             this.activeStream = null; // TODO: needs explicit close?
 #endif
 
@@ -135,7 +152,7 @@ namespace WSAUnity
             // if there is an active stream, play it now
             if (this.activeStream != null)
             {
-                Messenger.Broadcast(SympleLog.LogTrace, "symple:webrtc: active stream is not null, shuld play it now (TODO)");
+                Messenger.Broadcast(SympleLog.LogDebug, "symple:webrtc: active stream is not null, shuld play it now (TODO)");
                 //this.video.src = URL.createObjectURL(this.activeStream);
                 //this.video.play();
                 this.setState("playing");
@@ -194,28 +211,31 @@ namespace WSAUnity
                     Messenger.Broadcast(SympleLog.LogDebug, "\tHeight: " + (int)chosenCapability.Height);
                     Messenger.Broadcast(SympleLog.LogDebug, "\tFrameRate: " + (int)chosenCapability.FrameRate);
                     WebRTC.SetPreferredVideoCaptureFormat((int)chosenCapability.Width, (int)chosenCapability.Height, (int)chosenCapability.FrameRate);
-                    
+
                     //WebRTC.SetPreferredVideoCaptureFormat(640, 480, 30);
 
                     //Org.WebRtc.Media.SetDisplayOrientation(Windows.Graphics.Display.DisplayOrientations.None);
 
-                    MediaStream localStream = await GetMedia().GetUserMedia(new RTCMediaStreamConstraints { videoEnabled = true, audioEnabled = true });
+                    Messenger.Broadcast(SympleLog.LogDebug, "symple:webrtc: before getUserMedia");
+                    if (_localStream == null)
+                    {
+                        _localStream = await GetMedia().GetUserMedia(new RTCMediaStreamConstraints { videoEnabled = true, audioEnabled = true });
+                    }
+                    Messenger.Broadcast(SympleLog.LogDebug, "symple:webrtc: after getUserMedia");
 
                     // play the local video stream and create the SDP offer
+                    this.pc.AddStream(_localStream);
 
-                    this.pc.AddStream(localStream);
+                    Messenger.Broadcast(SympleLog.LogDebug, "symple:webrtc: should play the local stream and create the SDP offer (TODO)");
 
-
-                    Messenger.Broadcast(SympleLog.LogTrace, "symple:webrtc: should play the local stream and create the SDP offer (TODO)");
-
-                    Messenger.Broadcast(SympleLog.LogInfo, "localStream: " + localStream);
-                    var videoTracks = localStream.GetVideoTracks();
+                    Messenger.Broadcast(SympleLog.LogInfo, "localStream: " + _localStream);
+                    var videoTracks = _localStream.GetVideoTracks();
                     Messenger.Broadcast(SympleLog.LogInfo, "videoTracks in localStream: ");
                     foreach (var track in videoTracks)
                     {
                         Messenger.Broadcast(SympleLog.LogInfo, track.Id + ", enabled = " + track.Enabled + ", kind = " + track.Kind + ", suspended = " + track.Suspended);
                     }
-                    var audioTracks = localStream.GetAudioTracks();
+                    var audioTracks = _localStream.GetAudioTracks();
                     Messenger.Broadcast(SympleLog.LogInfo, "audioTracks in localStream: ");
                     foreach (var track in audioTracks)
                     {
@@ -225,16 +245,23 @@ namespace WSAUnity
                     if (videoTracks.Count > 0)
                     {
                         var source = GetMedia().CreateMediaSource(videoTracks[0], Symple.LocalMediaStreamId);
+                        
+                        Messenger.Broadcast(SympleLog.CreatedMediaSource, source);
 
-                        Messenger.Broadcast(SympleLog.MediaSource, source);
+                        if (this.pc != null)
+                        {
+                            RTCSessionDescription desc = await this.pc.CreateOffer();
 
-                        RTCSessionDescription desc = await this.pc.CreateOffer();
+                            Messenger.Broadcast(SympleLog.LogDebug, "symple:webrtc: offer: " + desc);
+                            this._onLocalSDP(desc);
 
-                        Messenger.Broadcast(SympleLog.LogDebug, "symple:webrtc: offer: " + desc);
-                        this._onLocalSDP(desc);
-
-                        // store the active local stream
-                        this.activeStream = localStream;
+                            // store the active local stream
+                            this.activeStream = _localStream;
+                        } else
+                        {
+                            Messenger.Broadcast(SympleLog.LogError, "peer connection was destroyed while trying to creat offer");
+                        }
+                        
                     } else
                     {
                         Messenger.Broadcast(SympleLog.LogError, "ERROR: No video track found locally");
@@ -302,7 +329,10 @@ namespace WSAUnity
 
                 string sdp = (string)desc["sdp"];
 
+                Messenger.Broadcast(SympleLog.LogDebug, "symple:webrtc: before setRemoteDescription");
                 await this.pc.SetRemoteDescription(new RTCSessionDescription(sdpType, sdp));
+                Messenger.Broadcast(SympleLog.LogDebug, "symple:webrtc: after setRemoteDescription");
+
                 Messenger.Broadcast(SympleLog.LogInfo, "symple:webrtc: sdp success");
 
                 if (sdpType == RTCSdpType.Offer)
@@ -377,14 +407,14 @@ namespace WSAUnity
                 this.setState("playing");
 
                 // ====== here we would play the video element ======
-                Messenger.Broadcast(SympleLog.LogTrace, "symple:webrtc: remote stream added, should play it now (TODO)");
+                Messenger.Broadcast(SympleLog.LogDebug, "symple:webrtc: remote stream added, should play it now (TODO)");
 
                 MediaVideoTrack peerVideoTrack = mediaStreamEvent.Stream.GetVideoTracks().FirstOrDefault();
                 if (peerVideoTrack != null)
                 {
                     IMediaSource mediaSource = GetMedia().CreateMediaSource(peerVideoTrack, RemotePeerVideoTrackId);
                     Messenger.Broadcast(SympleLog.LogInfo, "Created video source for remote peer video");
-                    Messenger.Broadcast(SympleLog.MediaSource, mediaSource);
+                    Messenger.Broadcast(SympleLog.CreatedMediaSource, mediaSource);
                 } else
                 {
                     Messenger.Broadcast(SympleLog.LogError, "ERROR: Received remote media stream, but there was no video track");
