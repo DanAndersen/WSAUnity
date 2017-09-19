@@ -50,20 +50,43 @@ namespace TestVideoReceiverApp
             Messenger.AddListener<string>(SympleLog.LogInfo, OnLog);
             Messenger.AddListener<string>(SympleLog.LogError, OnLog);
 
-            Messenger.AddListener<IMediaSource>(SympleLog.MediaSource, OnMediaSource);
+            Messenger.AddListener<IMediaSource>(SympleLog.CreatedMediaSource, OnCreatedMediaSource);
+            Messenger.AddListener(SympleLog.DestroyedMediaSource, OnDestroyedMediaSource);
         }
 
-        private void OnMediaSource(IMediaSource source)
+        private void OnDestroyedMediaSource()
         {
-            Messenger.Broadcast(SympleLog.LogDebug, "OnMediaSource");
+            Messenger.Broadcast(SympleLog.LogDebug, "OnDestroyedMediaSource");
             Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal,
             () =>
             {
-                var createdSource = MediaSource.CreateFromIMediaSource(source);
+                /*
+                MediaSource currentSource = _mediaPlayer.Source as MediaSource;
+                if (currentSource != null)
+                {
+                    currentSource.Dispose();
+                }
+                */
+
+                _mediaPlayer.Source = null;
+            }
+            );
+
+        }
+
+        private void OnCreatedMediaSource(IMediaSource source)
+        {
+            Messenger.Broadcast(SympleLog.LogDebug, "OnCreatedMediaSource");
+            Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal,
+            () =>
+            {
+                MediaSource createdSource = MediaSource.CreateFromIMediaSource(source);
+
                 _mediaPlayer.Source = createdSource;
                 _mediaPlayer.Play();
             }
             );
+
         }
 
         private void OnLog(string msg)
