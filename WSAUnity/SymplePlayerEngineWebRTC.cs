@@ -90,6 +90,7 @@ namespace WSAUnity
             if (_media == null)
             {
                 _media = Media.CreateMedia();
+                Media.SetDisplayOrientation(Windows.Graphics.Display.DisplayOrientations.Landscape);
             }
             return _media;
         }
