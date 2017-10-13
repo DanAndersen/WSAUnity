@@ -51,7 +51,8 @@ namespace WSAUnity
                 WebRTC.Initialize(null);    // needed before calling any webrtc functions http://stackoverflow.com/questions/43331677/webrtc-for-uwp-new-rtcpeerconnection-doesnt-complete-execution
                 webrtcInitialized = true;
             }
-            
+
+            this.userMediaConstraints = player.options.userMediaConstraints;
 
             if (player.options.rtcConfig != null)
             {
@@ -220,7 +221,7 @@ namespace WSAUnity
                     Messenger.Broadcast(SympleLog.LogDebug, "symple:webrtc: before getUserMedia");
                     if (_localStream == null)
                     {
-                        _localStream = await GetMedia().GetUserMedia(new RTCMediaStreamConstraints { videoEnabled = true, audioEnabled = true });
+                        _localStream = await GetMedia().GetUserMedia(this.userMediaConstraints);
                     }
                     Messenger.Broadcast(SympleLog.LogDebug, "symple:webrtc: after getUserMedia");
 

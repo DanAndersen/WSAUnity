@@ -45,6 +45,16 @@ namespace WSAUnity
         /// </summary>
         public string LocalPeerNameLabel { get; set; }
 
+        /// <summary>
+        /// Whether or not video is enabled;
+        /// </summary>
+        public bool VideoEnabled { get; set; }
+
+        /// <summary>
+        /// Whether or not audio is enabled;
+        /// </summary>
+        public bool AudioEnabled { get; set; }
+
         public string LocalPeerGroup { get; set; } = "public";
         
         public static StarWebrtcContext CreateTraineeContext()
@@ -54,6 +64,8 @@ namespace WSAUnity
             ctx.LocalPeerUsername = "star-trainee";
             ctx.LocalPeerNameLabel = "STAR Trainee";
             ctx.ExpectedRemoteReceiverUsername = "star-mentor";
+            ctx.VideoEnabled = true;
+            ctx.AudioEnabled = false;
 
             return ctx;
         }
@@ -64,6 +76,8 @@ namespace WSAUnity
             ctx.UserType = StarUserType.MENTOR;
             ctx.LocalPeerUsername = "star-mentor";
             ctx.LocalPeerNameLabel = "STAR Mentor";
+            ctx.VideoEnabled = true;
+            ctx.AudioEnabled = false;
 
             return ctx;
         }
@@ -96,6 +110,10 @@ namespace WSAUnity
             CLIENT_OPTIONS["peer"]["group"] = this.LocalPeerGroup;
 
             SymplePlayerOptions playerOptions = new SymplePlayerOptions();
+
+            playerOptions.userMediaConstraints.audioEnabled = this.AudioEnabled;
+            playerOptions.userMediaConstraints.videoEnabled = this.VideoEnabled;
+
             playerOptions.engine = "WebRTC";
 
             switch (UserType)

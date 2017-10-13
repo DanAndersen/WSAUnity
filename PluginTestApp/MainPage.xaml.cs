@@ -80,8 +80,12 @@ namespace PluginTestApp
             Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal,
             () =>
             {
+                OnLog("about to create from imediasource");
+
                 MediaSource createdSource = MediaSource.CreateFromIMediaSource(source);
-                
+
+                OnLog("createdSource: " + createdSource.ToString() + " " + createdSource.State + " " + createdSource.IsOpen);
+
                 _mediaPlayer.Source = createdSource;
                 _mediaPlayer.Play();
             }

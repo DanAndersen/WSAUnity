@@ -21,7 +21,7 @@ namespace WSAUnity
         public bool initiator;
 #if NETFX_CORE
         public RTCConfiguration rtcConfig;
-        public RTCMediaStreamConstraints userMediaConstraints;
+        public RTCMediaStreamConstraints userMediaConstraints = new RTCMediaStreamConstraints { videoEnabled = true, audioEnabled = true };
 #endif
     }
 }
