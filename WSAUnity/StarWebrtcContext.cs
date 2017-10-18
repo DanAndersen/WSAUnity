@@ -97,6 +97,27 @@ namespace WSAUnity
 #endif
         bool initialized = false;
         
+
+        public void teardown()
+        {
+            if (client != null)
+            {
+                client.disconnect();
+                client = null;
+            }
+
+            if (player != null)
+            {
+                if (player.engine != null)
+                {
+                    player.engine.destroy();
+                    player.engine = null;
+                }
+                player = null;
+            }
+        }
+
+
         public void initAndStartWebRTC()
         {
 #if NETFX_CORE
@@ -195,8 +216,11 @@ namespace WSAUnity
                 {
                     initialized = false;
                     remotePeer = null;
-                    player.engine.destroy();
-                    player.engine = null;
+                    if (player.engine != null)
+                    {
+                        player.engine.destroy();
+                        player.engine = null;
+                    }
                 }
             });
 
@@ -397,85 +421,5 @@ namespace WSAUnity
             Messenger.Broadcast(SympleLog.LogInfo, "not actually doing startPlaybackAndRecording because NETFX_CORE not defined (probably this is in the unity editor)");
 #endif
         }
-
-        private bool webrtcInitialized = false;
-
-
-#if NETFX_CORE
-        private Media _media;
-        private MediaVideoTrack _selectedVideoTrack;
-        private MediaStream _localStream;
-        public async void testStartVideoLocal()
-        {
-            Messenger.Broadcast(SympleLog.LogDebug, "basicTestVideo()");
-            
-            if (!webrtcInitialized)
-            {
-                WebRTC.Initialize(null);    // needed before calling any webrtc functions http://stackoverflow.com/questions/43331677/webrtc-for-uwp-new-rtcpeerconnection-doesnt-complete-execution
-                webrtcInitialized = true;
-            }
-            
-            Messenger.Broadcast(SympleLog.LogDebug, "creating media");
-
-            if (_media == null)
-            {
-                _media = Media.CreateMedia();
-                _media.OnMediaDevicesChanged += (MediaDeviceType mediaType) =>
-                {
-                    Messenger.Broadcast(SympleLog.LogDebug, "OnMediaDevicesChanged(), mediaType = " + mediaType);
-                };
-            }
-            
-            Messenger.Broadcast(SympleLog.LogDebug, "created media");
-
-            var videoCaptureDevices = _media.GetVideoCaptureDevices();
-            Messenger.Broadcast(SympleLog.LogDebug, "num videoCaptureDevices: " + videoCaptureDevices.Count);
-
-            var videoDevice = videoCaptureDevices[0];
-
-            Messenger.Broadcast(SympleLog.LogDebug, "getting videoCaptureCapabilities");
-            var videoCaptureCapabilities = await videoDevice.GetVideoCaptureCapabilities();
-            Messenger.Broadcast(SympleLog.LogDebug, "got videoCaptureCapabilities");
-
-            var chosenCapability = videoCaptureCapabilities[0];
-            Messenger.Broadcast(SympleLog.LogDebug, "chosenCapability:");
-            Messenger.Broadcast(SympleLog.LogDebug, "\tWidth: " + (int)chosenCapability.Width);
-            Messenger.Broadcast(SympleLog.LogDebug, "\tHeight: " + (int)chosenCapability.Height);
-            Messenger.Broadcast(SympleLog.LogDebug, "\tFrameRate: " + (int)chosenCapability.FrameRate);
-            WebRTC.SetPreferredVideoCaptureFormat((int)chosenCapability.Width, (int)chosenCapability.Height, (int)chosenCapability.FrameRate);
-
-            Messenger.Broadcast(SympleLog.LogDebug, "getting usermedia");
-            if (_localStream == null)
-            {
-                _localStream = await _media.GetUserMedia(new RTCMediaStreamConstraints { videoEnabled = true, audioEnabled = true });
-            }
-            
-            Messenger.Broadcast(SympleLog.LogDebug, "got usermedia");
-
-            Messenger.Broadcast(SympleLog.LogDebug, "localStream id: " + _localStream.Id);
-            Messenger.Broadcast(SympleLog.LogDebug, "localStream Active?: " + _localStream.Active);
-
-            var videoTracks = _localStream.GetVideoTracks();
-            Messenger.Broadcast(SympleLog.LogDebug, "num videoTracks: " + videoTracks.Count);
-
-            _selectedVideoTrack = videoTracks[0];
-
-            Messenger.Broadcast(SympleLog.LogDebug, "selected video track id: " + _selectedVideoTrack.Id);
-            Messenger.Broadcast(SympleLog.LogDebug, "selected video track suspended?: " + _selectedVideoTrack.Suspended);
-            Messenger.Broadcast(SympleLog.LogDebug, "selected video track enabled?: " + _selectedVideoTrack.Enabled);
-
-            var source = _media.CreateMediaSource(_selectedVideoTrack, Symple.LocalMediaStreamId);
-
-            Messenger.Broadcast(SympleLog.LogDebug, "created mediasource");
-
-            Messenger.Broadcast(SympleLog.CreatedMediaSource, source);
-        }
-
-        public async void testShutdownVideoLocal()
-        {
-            Messenger.Broadcast(SympleLog.DestroyedMediaSource);
-        }
-#endif
-
     }
 }

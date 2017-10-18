@@ -116,13 +116,12 @@ namespace WSAUnity
             this.sendLocalSDP = null;
             this.sendLocalCandidate = null;
 
-            /*
+            
             if (this.pc != null && this.activeStream != null)
             {
                 this.pc.RemoveStream(this.activeStream);
             }
-            */
-
+            
             Messenger.Broadcast(SympleLog.DestroyedMediaSource);
 
             this.activeStream = null; // TODO: needs explicit close?
@@ -143,6 +142,12 @@ namespace WSAUnity
                 this.pc.Close();
                 this.pc = null;
                 // anything else needed for peer connection cleanup?
+            }
+
+            if (_media != null)
+            {
+                _media.Dispose();
+                _media = null;
             }
 #endif
         }
