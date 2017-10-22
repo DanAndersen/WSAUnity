@@ -117,7 +117,7 @@ namespace WSAUnity
 
         public void setState(string state, string message = null)
         {
-            Messenger.Broadcast(SympleLog.LogInfo, "symple:player: set state " + this.state + " => " + state);
+            Messenger.Broadcast(SympleLog.LogDebug, "symple:player: set state " + this.state + " => " + state);
 
             if (state.Equals(this.state))
             {

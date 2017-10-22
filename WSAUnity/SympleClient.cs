@@ -169,7 +169,7 @@ namespace WSAUnity
                             m["from"] = rpeer;
                         } else
                         {
-                            Messenger.Broadcast(SympleLog.LogInfo, "symple:client: got message from unknown peer: " + m);
+                            Messenger.Broadcast(SympleLog.LogDebug, "symple:client: got message from unknown peer: " + m);
                         }
 
                         // Dispatch to the application

@@ -171,10 +171,10 @@ namespace WSAUnity
                 player.displayStatus(state);
             };
 
-            Messenger.Broadcast(SympleLog.LogInfo, "creating player");
+            Messenger.Broadcast(SympleLog.LogTrace, "creating player");
             player = new SymplePlayer(playerOptions);
 
-            Messenger.Broadcast(SympleLog.LogInfo, "creating client");
+            Messenger.Broadcast(SympleLog.LogTrace, "creating client");
             client = new SympleClient(CLIENT_OPTIONS);
 
             client.on("announce", (peer) => {
@@ -203,7 +203,7 @@ namespace WSAUnity
 
             client.on("presence", (presence) =>
             {
-                Messenger.Broadcast(SympleLog.LogInfo, "Recv presence: " + presence);
+                Messenger.Broadcast(SympleLog.LogDebug, "Recv presence: " + presence);
             });
 
             client.on("removePeer", (peerObj) =>
@@ -244,7 +244,7 @@ namespace WSAUnity
 
                 if (remotePeer != null && !remotePeer["id"].Equals(mFromId))
                 {
-                    Messenger.Broadcast(SympleLog.LogInfo, "Dropping message from unknown peer: " + m);
+                    Messenger.Broadcast(SympleLog.LogDebug, "Dropping message from unknown peer: " + m);
                     return;
                 }
                 if (m["offer"] != null)
@@ -252,11 +252,11 @@ namespace WSAUnity
                     switch (UserType)
                     {
                         case StarUserType.TRAINEE:
-                            Messenger.Broadcast(SympleLog.LogInfo, "Unexpected offer for one-way streaming");
+                            Messenger.Broadcast(SympleLog.LogDebug, "Unexpected offer for one-way streaming");
                             break;
                         case StarUserType.MENTOR:
 
-                            Messenger.Broadcast(SympleLog.LogInfo, "Receive offer: " + m["offer"]);
+                            Messenger.Broadcast(SympleLog.LogDebug, "Receive offer: " + m["offer"]);
 
                             remotePeer = (JObject)m["from"];
 
@@ -269,7 +269,7 @@ namespace WSAUnity
 
                             engine.sendLocalSDP = (desc) =>
                             {
-                                Messenger.Broadcast(SympleLog.LogInfo, "Send answer: " + desc);
+                                Messenger.Broadcast(SympleLog.LogDebug, "Send answer: " + desc);
 
                                 JObject sessionDesc = new JObject();
                                 sessionDesc["sdp"] = desc.Sdp;
@@ -333,7 +333,7 @@ namespace WSAUnity
                             break;
                         case StarUserType.MENTOR:
 
-                            Messenger.Broadcast(SympleLog.LogInfo, "Unexpected answer for one-way streaming");
+                            Messenger.Broadcast(SympleLog.LogDebug, "Unexpected answer for one-way streaming");
 
                             break;
                         default:
@@ -346,7 +346,7 @@ namespace WSAUnity
 
                     JObject candidateParams = (JObject)m["candidate"];
 
-                    Messenger.Broadcast(SympleLog.LogInfo, "Using Candidate: " + candidateParams);
+                    Messenger.Broadcast(SympleLog.LogDebug, "Using Candidate: " + candidateParams);
                     engine.recvRemoteCandidate(candidateParams);
                 }
             });
@@ -370,7 +370,7 @@ namespace WSAUnity
         private void startPlaybackAndRecording()
         {
 #if NETFX_CORE
-            Messenger.Broadcast(SympleLog.LogDebug, "startPlaybackAndRecording");
+            Messenger.Broadcast(SympleLog.LogTrace, "startPlaybackAndRecording");
             JObject playParams = new JObject();   // empty params
 
             player.play(playParams);
@@ -378,7 +378,7 @@ namespace WSAUnity
             var engine = (SymplePlayerEngineWebRTC)player.engine;
             engine.sendLocalSDP = (desc) =>
             {
-                Messenger.Broadcast(SympleLog.LogDebug, "send offer");
+                Messenger.Broadcast(SympleLog.LogTrace, "send offer");
 
                 JObject sessionDesc = new JObject();
                 sessionDesc["sdp"] = desc.Sdp;

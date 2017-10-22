@@ -43,12 +43,18 @@ namespace WSAUnity
 
         public SymplePlayerEngineWebRTC(SymplePlayer player) : base(player)
         {
-            Messenger.Broadcast(SympleLog.LogInfo, "symple:webrtc: init");
+            Messenger.Broadcast(SympleLog.LogDebug, "symple:webrtc: init");
 
 #if NETFX_CORE
             if (!webrtcInitialized)
             {
                 WebRTC.Initialize(null);    // needed before calling any webrtc functions http://stackoverflow.com/questions/43331677/webrtc-for-uwp-new-rtcpeerconnection-doesnt-complete-execution
+                WebRTC.EnableLogging(LogLevel.LOGLVL_ERROR);
+                WebRTC.EnableLogging(LogLevel.LOGLVL_INFO);
+                WebRTC.EnableLogging(LogLevel.LOGLVL_SENSITIVE);
+                WebRTC.EnableLogging(LogLevel.LOGLVL_VERBOSE);
+                WebRTC.EnableLogging(LogLevel.LOGLVL_WARNING);
+                Messenger.Broadcast(SympleLog.LogInfo, "WebRTC logging enabled, log folder = " + WebRTC.LogFolder.Path + ", filename = " + WebRTC.LogFileName);
                 webrtcInitialized = true;
             }
 
@@ -75,7 +81,7 @@ namespace WSAUnity
             // Specifies that this client will be the ICE initiator,
             // and will be sending the initial SDP Offer.
             this.initiator = player.options.initiator;
-            Messenger.Broadcast(SympleLog.LogInfo, "symple:webrtc: constructor, set this.initiator to " + this.initiator);
+            Messenger.Broadcast(SympleLog.LogDebug, "symple:webrtc: constructor, set this.initiator to " + this.initiator);
 
 #if NETFX_CORE
             
@@ -116,7 +122,8 @@ namespace WSAUnity
             this.sendLocalSDP = null;
             this.sendLocalCandidate = null;
 
-            
+
+
             if (this.pc != null && this.activeStream != null)
             {
                 this.pc.RemoveStream(this.activeStream);
@@ -124,7 +131,35 @@ namespace WSAUnity
             
             Messenger.Broadcast(SympleLog.DestroyedMediaSource);
 
-            this.activeStream = null; // TODO: needs explicit close?
+            if (this._localStream != null)
+            {
+                foreach (var audioTrack in this._localStream.GetAudioTracks())
+                {
+                    this._localStream.RemoveTrack(audioTrack);
+                }
+
+                foreach (var videoTrack in this._localStream.GetVideoTracks())
+                {
+                    this._localStream.RemoveTrack(videoTrack);
+                }
+
+                this._localStream = null;
+            }
+
+            if (this.activeStream != null)
+            {
+                foreach (var audioTrack in this.activeStream.GetAudioTracks())
+                {
+                    this.activeStream.RemoveTrack(audioTrack);
+                }
+
+                foreach (var videoTrack in this.activeStream.GetVideoTracks())
+                {
+                    this.activeStream.RemoveTrack(videoTrack);
+                }
+
+                this.activeStream = null;
+            }
 #endif
 
             /*
@@ -181,7 +216,7 @@ namespace WSAUnity
                         var capabilities = await dev.GetVideoCaptureCapabilities();
                         foreach (var capability in capabilities)
                         {
-                            Messenger.Broadcast(SympleLog.LogInfo, "\t" + capability.FullDescription);
+                            Messenger.Broadcast(SympleLog.LogDebug, "\t" + capability.FullDescription);
                         }
                     }
 
@@ -232,21 +267,19 @@ namespace WSAUnity
 
                     // play the local video stream and create the SDP offer
                     this.pc.AddStream(_localStream);
-
-                    Messenger.Broadcast(SympleLog.LogDebug, "symple:webrtc: should play the local stream and create the SDP offer (TODO)");
-
-                    Messenger.Broadcast(SympleLog.LogInfo, "localStream: " + _localStream);
+                    
+                    Messenger.Broadcast(SympleLog.LogDebug, "localStream: " + _localStream);
                     var videoTracks = _localStream.GetVideoTracks();
-                    Messenger.Broadcast(SympleLog.LogInfo, "videoTracks in localStream: ");
+                    Messenger.Broadcast(SympleLog.LogDebug, "videoTracks in localStream: ");
                     foreach (var track in videoTracks)
                     {
-                        Messenger.Broadcast(SympleLog.LogInfo, track.Id + ", enabled = " + track.Enabled + ", kind = " + track.Kind + ", suspended = " + track.Suspended);
+                        Messenger.Broadcast(SympleLog.LogDebug, track.Id + ", enabled = " + track.Enabled + ", kind = " + track.Kind + ", suspended = " + track.Suspended);
                     }
                     var audioTracks = _localStream.GetAudioTracks();
-                    Messenger.Broadcast(SympleLog.LogInfo, "audioTracks in localStream: ");
+                    Messenger.Broadcast(SympleLog.LogDebug, "audioTracks in localStream: ");
                     foreach (var track in audioTracks)
                     {
-                        Messenger.Broadcast(SympleLog.LogInfo, track.Id + ", enabled = " + track.Enabled + ", kind = " + track.Kind);
+                        Messenger.Broadcast(SympleLog.LogDebug, track.Id + ", enabled = " + track.Enabled + ", kind = " + track.Kind);
                     }
 
                     if (videoTracks.Count > 0)
@@ -359,7 +392,7 @@ namespace WSAUnity
         // called when remote candidate is received from the peer
         public async void recvRemoteCandidate(JObject candidateParams)
         {
-            Messenger.Broadcast(SympleLog.LogInfo, "symple:webrtc: recv remote candidate " + candidateParams);
+            Messenger.Broadcast(SympleLog.LogDebug, "symple:webrtc: recv remote candidate " + candidateParams);
             if (this.pc == null)
             {
                 throw new Exception("the peer connection is not initialized"); // call recvRemoteSDP first
@@ -400,7 +433,7 @@ namespace WSAUnity
                     }
                 } else
                 {
-                    Messenger.Broadcast(SympleLog.LogInfo, "symple:webrtc: candidate gathering complete");
+                    Messenger.Broadcast(SympleLog.LogDebug, "symple:webrtc: candidate gathering complete");
                 }
             };
 
