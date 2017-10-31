@@ -220,13 +220,22 @@ namespace WSAUnity
                         }
                     }
 
-                    var videoDevice = videoCaptureDevices[0];
+                    int requestedWebRtcCameraIndex = parameters["requestedWebRtcCameraIndex"].ToObject<int>();
+                    int usedWebRtcCameraIndex = requestedWebRtcCameraIndex;
+                    if (requestedWebRtcCameraIndex >= videoCaptureDevices.Count)
+                    {
+                        Messenger.Broadcast(SympleLog.LogInfo, "NOTE: requested WebRTC camera index of " + requestedWebRtcCameraIndex + " is out of range of the number of available video capture devices (" + videoCaptureDevices.Count + "). Resetting to 0.");
+                        usedWebRtcCameraIndex = 0;
+                    }
+                    Messenger.Broadcast(SympleLog.LogInfo, "Selecting WebRTC camera with index " + usedWebRtcCameraIndex);
+                    
+                    var selectedVideoDevice = videoCaptureDevices[usedWebRtcCameraIndex];
 
                     Messenger.Broadcast(SympleLog.LogDebug, "getting videoCaptureCapabilities");
-                    var videoCaptureCapabilities = await videoDevice.GetVideoCaptureCapabilities();
+                    var videoCaptureCapabilities = await selectedVideoDevice.GetVideoCaptureCapabilities();
                     Messenger.Broadcast(SympleLog.LogDebug, "got videoCaptureCapabilities");
 
-                    GetMedia().SelectVideoDevice(videoCaptureDevices[0]);
+                    GetMedia().SelectVideoDevice(selectedVideoDevice);
 
                     
                     // We need to specify a preferred video capture format; it has to be one of the supported capabilities of the device.

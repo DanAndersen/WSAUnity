@@ -55,6 +55,11 @@ namespace WSAUnity
         /// </summary>
         public bool AudioEnabled { get; set; }
 
+        /// <summary>
+        /// When multiple cameras are attached, use this to determine which camera index to use when sending. Default should be 0 (for only 1 webcam).
+        /// </summary>
+        public int RequestedCameraIndexToTransmit { get; set; }
+
         public string LocalPeerGroup { get; set; } = "public";
         
         public static StarWebrtcContext CreateTraineeContext()
@@ -66,6 +71,7 @@ namespace WSAUnity
             ctx.ExpectedRemoteReceiverUsername = "star-mentor";
             ctx.VideoEnabled = true;
             ctx.AudioEnabled = false;
+            ctx.RequestedCameraIndexToTransmit = 0;
 
             return ctx;
         }
@@ -78,6 +84,7 @@ namespace WSAUnity
             ctx.LocalPeerNameLabel = "STAR Mentor";
             ctx.VideoEnabled = true;
             ctx.AudioEnabled = false;
+            ctx.RequestedCameraIndexToTransmit = 0;
 
             return ctx;
         }
@@ -260,7 +267,8 @@ namespace WSAUnity
 
                             remotePeer = (JObject)m["from"];
 
-                            JObject playParams = new JObject();   // empty params
+                            JObject playParams = new JObject();
+                            // don't set requestedWebRtcCameraIndex here, because that's only for when sending video... instead we want to render whatever video we receive
                             player.play(playParams);
 
                             var engine = (SymplePlayerEngineWebRTC)player.engine;
@@ -371,8 +379,9 @@ namespace WSAUnity
         {
 #if NETFX_CORE
             Messenger.Broadcast(SympleLog.LogTrace, "startPlaybackAndRecording");
-            JObject playParams = new JObject();   // empty params
+            JObject playParams = new JObject();
 
+            playParams["requestedWebRtcCameraIndex"] = this.RequestedCameraIndexToTransmit;
             player.play(playParams);
 
             var engine = (SymplePlayerEngineWebRTC)player.engine;
