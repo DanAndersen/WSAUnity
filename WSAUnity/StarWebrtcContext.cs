@@ -60,6 +60,16 @@ namespace WSAUnity
         /// </summary>
         public int RequestedCameraIndexToTransmit { get; set; }
 
+        /// <summary>
+        /// The requested video width when sending.
+        /// </summary>
+        public int RequestedVideoWidth { get; set; }
+
+        /// <summary>
+        /// The requested video height when sending.
+        /// </summary>
+        public int RequestedVideoHeight { get; set; }
+
         public string LocalPeerGroup { get; set; } = "public";
         
         public static StarWebrtcContext CreateTraineeContext()
@@ -72,6 +82,8 @@ namespace WSAUnity
             ctx.VideoEnabled = true;
             ctx.AudioEnabled = false;
             ctx.RequestedCameraIndexToTransmit = 0;
+            ctx.RequestedVideoWidth = 640;
+            ctx.RequestedVideoHeight = 480;
 
             return ctx;
         }
@@ -85,6 +97,8 @@ namespace WSAUnity
             ctx.VideoEnabled = true;
             ctx.AudioEnabled = false;
             ctx.RequestedCameraIndexToTransmit = 0;
+            ctx.RequestedVideoWidth = 640;
+            ctx.RequestedVideoHeight = 480;
 
             return ctx;
         }
@@ -382,6 +396,8 @@ namespace WSAUnity
             JObject playParams = new JObject();
 
             playParams["requestedWebRtcCameraIndex"] = this.RequestedCameraIndexToTransmit;
+            playParams["requestedVideoWidth"] = this.RequestedVideoWidth;
+            playParams["requestedVideoHeight"] = this.RequestedVideoHeight;
             player.play(playParams);
 
             var engine = (SymplePlayerEngineWebRTC)player.engine;

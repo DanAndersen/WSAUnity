@@ -237,21 +237,45 @@ namespace WSAUnity
 
                     GetMedia().SelectVideoDevice(selectedVideoDevice);
 
-                    
+
+                    int requestedVideoWidth;
+                    if (parameters["requestedVideoWidth"] != null)
+                    {
+                        requestedVideoWidth = parameters["requestedVideoWidth"].ToObject<int>();
+                    } else
+                    {
+                        Messenger.Broadcast(SympleLog.LogDebug, "requestedVideoWidth set to default");
+                        requestedVideoWidth = 640;
+                    }
+
+                    int requestedVideoHeight;
+                    if (parameters["requestedVideoHeight"] != null)
+                    {
+                        requestedVideoHeight = parameters["requestedVideoHeight"].ToObject<int>();
+                    }
+                    else
+                    {
+                        Messenger.Broadcast(SympleLog.LogDebug, "requestedVideoHeight set to default");
+                        requestedVideoHeight = 480;
+                    }
+
+                    int numRequestedPixels = requestedVideoWidth * requestedVideoHeight;
+
                     // We need to specify a preferred video capture format; it has to be one of the supported capabilities of the device.
-                    // We will choose the capability that has the lowest resolution and the highest frame rate for that resolution.
+                    // We will choose the capability that is as close as possible to the requested resolution while also having the highest frame rate for that resolution;
                     var chosenCapability = videoCaptureCapabilities[0];
                     foreach (var capability in videoCaptureCapabilities)
                     {
-                        if (capability.Width == 640 && capability.Height == 480)
-                        {
-                            // we'd prefer to just do 640x480 if possible
-                            chosenCapability = capability;
-                            break;
-                        }
+                        int numPixelsInThisCapability = (int)(capability.Width * capability.Height);
+                        int numPixelsInChosenCapability = (int)(chosenCapability.Width * chosenCapability.Height);
 
-                        if ( (capability.Width < chosenCapability.Width && capability.Height < chosenCapability.Height) ||
-                            (capability.Width == chosenCapability.Width && capability.Height == chosenCapability.Height && capability.FrameRate > chosenCapability.FrameRate) )
+                        long thisPixelDeltaFromRequested = Math.Abs(numPixelsInThisCapability - numRequestedPixels);
+                        long chosenPixelDeltaFromRequested = Math.Abs(numPixelsInChosenCapability - numRequestedPixels);
+
+                        if (thisPixelDeltaFromRequested < chosenPixelDeltaFromRequested)
+                        {
+                            chosenCapability = capability;
+                        } else if (thisPixelDeltaFromRequested == chosenPixelDeltaFromRequested && capability.FrameRate > chosenCapability.FrameRate)
                         {
                             chosenCapability = capability;
                         }
@@ -262,9 +286,7 @@ namespace WSAUnity
                     Messenger.Broadcast(SympleLog.LogDebug, "\tHeight: " + (int)chosenCapability.Height);
                     Messenger.Broadcast(SympleLog.LogDebug, "\tFrameRate: " + (int)chosenCapability.FrameRate);
                     WebRTC.SetPreferredVideoCaptureFormat((int)chosenCapability.Width, (int)chosenCapability.Height, (int)chosenCapability.FrameRate);
-
-                    //WebRTC.SetPreferredVideoCaptureFormat(640, 480, 30);
-
+                    
                     //Org.WebRtc.Media.SetDisplayOrientation(Windows.Graphics.Display.DisplayOrientations.None);
 
                     Messenger.Broadcast(SympleLog.LogDebug, "symple:webrtc: before getUserMedia");
