@@ -225,6 +225,8 @@ namespace WSAUnity
             if (this.socket != null)
             {
                 this.socket.Disconnect();
+                this.socket.Close();
+                this.socket = null;
             }
 #endif
         }

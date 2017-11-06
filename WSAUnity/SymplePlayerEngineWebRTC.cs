@@ -184,6 +184,7 @@ namespace WSAUnity
                 _media.Dispose();
                 _media = null;
             }
+            Media.OnAppSuspending();
 #endif
         }
 
