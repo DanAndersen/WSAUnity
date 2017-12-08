@@ -116,15 +116,6 @@ namespace PluginTestApp
 
             starWebrtcContext.initAndStartWebRTC();
         }
-
-        private async void testStartLocalVideoButton_Click(object sender, RoutedEventArgs e )
-        {
-            starWebrtcContext.testStartVideoLocal();
-        }
-
-        private async void testDisconnectLocalVideoButton_Click(object sender, RoutedEventArgs e)
-        {
-            starWebrtcContext.testShutdownVideoLocal();
-        }
+        
     }
 }

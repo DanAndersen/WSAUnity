@@ -20,6 +20,9 @@ using Windows.Media.Playback;
 using Windows.Media.Core;
 using WSAUnity;
 
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+
 // The Blank Page item template is documented at http://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
 
 namespace TestVideoReceiverApp
@@ -52,6 +55,40 @@ namespace TestVideoReceiverApp
 
             Messenger.AddListener<IMediaSource>(SympleLog.CreatedMediaSource, OnCreatedMediaSource);
             Messenger.AddListener(SympleLog.DestroyedMediaSource, OnDestroyedMediaSource);
+
+
+            Messenger.AddListener(SympleLog.RemoteAnnotationReceiverConnected, OnRemoteAnnotationReceiverConnected);
+            Messenger.AddListener(SympleLog.RemoteAnnotationReceiverDisconnected, OnRemoteAnnotationReceiverDisconnected);
+
+        }
+
+        private void OnRemoteAnnotationReceiverConnected()
+        {
+            Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal,
+            () =>
+            {
+                sendTestMessageToAnnotationReceiverButton.IsEnabled = true;
+            }
+            );
+        }
+
+        private void sendTestMessageToAnnotationReceiverButton_Click(object sender, RoutedEventArgs e)
+        {
+            JObject testMessageObj = new JObject();
+            testMessageObj["foo"] = "bar";
+            testMessageObj["baz"] = "bat";
+            
+            starWebrtcContext.sendMessageToAnnotationReceiver(testMessageObj);
+        }
+
+        private void OnRemoteAnnotationReceiverDisconnected()
+        {
+            Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal,
+            () =>
+            {
+                sendTestMessageToAnnotationReceiverButton.IsEnabled = false;
+            }
+            );
         }
 
         private void OnDestroyedMediaSource()
@@ -110,5 +147,7 @@ namespace TestVideoReceiverApp
 
             starWebrtcContext.initAndStartWebRTC();
         }
+
+        
     }
 }

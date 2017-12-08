@@ -19,7 +19,8 @@ namespace WSAUnity
         public enum StarUserType
         {
             TRAINEE,
-            MENTOR
+            MENTOR,
+            ANNOTATION_RECEIVER
         }
 
         public StarUserType UserType { get; private set; }
@@ -30,10 +31,16 @@ namespace WSAUnity
         public string SignallingServerUrl { get; set; } = "https://purduestarproj-webrtc-signal.herokuapp.com";
 
         /// <summary>
-        /// TRAINEE only: The peer username of the remote mentor user that this context will wait for.
+        /// TRAINEE only: The peer username of the remote mentor user that this context will wait for, to send video.
         /// Once another peer with this name connects, the TRAINEE context will automatically start sending video to that peer.
         /// </summary>
-        public string ExpectedRemoteReceiverUsername { get; set; } = "star-mentor";
+        public string ExpectedRemoteVideoReceiverUsername { get; set; } = "star-mentor";
+
+        /// <summary>
+        /// MENTOR only: The peer username of the remote user that this context will send annotations to.
+        /// Once another peer with this name connects, the MENTOR context will direct any annotations commands to that peer.
+        /// </summary>
+        public string ExpectedRemoteAnnotationReceiverUsername { get; set; } = "annotation-receiver";
 
         /// <summary>
         /// The username that this peer is known by in the WebRTC signalling server.
@@ -71,14 +78,26 @@ namespace WSAUnity
         public int RequestedVideoHeight { get; set; }
 
         public string LocalPeerGroup { get; set; } = "public";
-        
+
+        public static StarWebrtcContext CreateAnnotationReceiverContext()
+        {
+            StarWebrtcContext ctx = new StarWebrtcContext();
+            ctx.UserType = StarUserType.ANNOTATION_RECEIVER;
+            ctx.LocalPeerUsername = "annotation-receiver";
+            ctx.LocalPeerNameLabel = "Annotation Receiver";
+            ctx.VideoEnabled = false;
+            ctx.AudioEnabled = false;
+
+            return ctx;
+        }
+
         public static StarWebrtcContext CreateTraineeContext()
         {
             StarWebrtcContext ctx = new StarWebrtcContext();
             ctx.UserType = StarUserType.TRAINEE;
             ctx.LocalPeerUsername = "star-trainee";
             ctx.LocalPeerNameLabel = "STAR Trainee";
-            ctx.ExpectedRemoteReceiverUsername = "star-mentor";
+            ctx.ExpectedRemoteVideoReceiverUsername = "star-mentor";
             ctx.VideoEnabled = true;
             ctx.AudioEnabled = false;
             ctx.RequestedCameraIndexToTransmit = 0;
@@ -94,6 +113,7 @@ namespace WSAUnity
             ctx.UserType = StarUserType.MENTOR;
             ctx.LocalPeerUsername = "star-mentor";
             ctx.LocalPeerNameLabel = "STAR Mentor";
+            ctx.ExpectedRemoteAnnotationReceiverUsername = "annotation-receiver";
             ctx.VideoEnabled = true;
             ctx.AudioEnabled = false;
             ctx.RequestedCameraIndexToTransmit = 0;
@@ -114,11 +134,12 @@ namespace WSAUnity
         SymplePlayer player = null;
         SympleClient client = null;
 #if NETFX_CORE
-        JObject remotePeer;
+        JObject remoteVideoPeer;    // used by TRAINEE and MENTOR contexts to keep track of the remote peer they are communicating with for *video*.
+        JObject remoteAnnotationPeer;   // used by ANNOTATION_RECEIVER and MENTOR contexts to keep track of the remote peer they are communicating with for *annotations*.
 #endif
-        bool initialized = false;
+        bool videoPeerInitialized = false;
+        bool annotationPeerInitialized = false;
         
-
         public void teardown()
         {
             if (client != null)
@@ -212,11 +233,26 @@ namespace WSAUnity
                 {
                     // the TRAINEE user waits for a peer with a specific username, then once it's connected it automatically starts sending video
 
-                    if ((string)peer["user"] == this.ExpectedRemoteReceiverUsername && !initialized)
+                    if ((string)peer["user"] == this.ExpectedRemoteVideoReceiverUsername && !videoPeerInitialized)
                     {
-                        initialized = true;
-                        remotePeer = peer;
+                        videoPeerInitialized = true;
+                        remoteVideoPeer = peer;
                         startPlaybackAndRecording();
+                    }
+                }
+
+                if (this.UserType == StarUserType.MENTOR)
+                {
+                    // once the MENTOR user sees that the ANNOTATION_RECEIVER user has connected, the MENTOR user keeps track of that peer in order to send annotation messages to it.
+
+                    if ((string)peer["user"] == this.ExpectedRemoteAnnotationReceiverUsername && !annotationPeerInitialized)
+                    {
+                        annotationPeerInitialized = true;
+                        remoteAnnotationPeer = peer;
+
+                        Messenger.Broadcast(SympleLog.RemoteAnnotationReceiverConnected);
+
+                        // TODO: we could add code here to automatically send any annotation commands that were kept on a queue, so that if the HoloLens drops out and comes back, it can get all the annotations made by the mentor.
                     }
                 }
                 
@@ -233,15 +269,27 @@ namespace WSAUnity
 
                 Messenger.Broadcast(SympleLog.LogInfo, "Removing peer: " + peer);
 
-                if (remotePeer != null && remotePeer["id"].Equals(peer["id"]))
+                if (remoteVideoPeer != null && remoteVideoPeer["id"].Equals(peer["id"]))
                 {
-                    initialized = false;
-                    remotePeer = null;
+                    Messenger.Broadcast(SympleLog.LogInfo, "Removing remote video peer");
+                    videoPeerInitialized = false;
+                    remoteVideoPeer = null;
                     if (player.engine != null)
                     {
                         player.engine.destroy();
                         player.engine = null;
                     }
+                }
+
+                if (remoteAnnotationPeer != null && remoteAnnotationPeer["id"].Equals(peer["id"]))
+                {
+                    Messenger.Broadcast(SympleLog.LogInfo, "Removing remote annotation peer");
+                    annotationPeerInitialized = false;
+                    remoteAnnotationPeer = null;
+
+                    Messenger.Broadcast(SympleLog.RemoteAnnotationReceiverDisconnected);
+
+                    // TODO: we could do some caching of annotation commands locally, in case the peer is reconnecting later in the future.
                 }
             });
 
@@ -250,10 +298,7 @@ namespace WSAUnity
                 Messenger.Broadcast(SympleLog.LogTrace, "mObj.GetType().ToString(): " + mObj.GetType().ToString());
 
                 JObject m = (JObject)((Object[])mObj)[0];
-
-                Messenger.Broadcast(SympleLog.LogTrace, "recv message: " + m);
-                Messenger.Broadcast(SympleLog.LogTrace, "remotePeer: " + remotePeer);
-
+                
                 var mFrom = m["from"];
 
                 JToken mFromId = null;
@@ -263,11 +308,14 @@ namespace WSAUnity
                     mFromId = mFrom["id"];
                 }
 
+                /*
                 if (remotePeer != null && !remotePeer["id"].Equals(mFromId))
                 {
                     Messenger.Broadcast(SympleLog.LogDebug, "Dropping message from unknown peer: " + m);
                     return;
                 }
+                */
+
                 if (m["offer"] != null)
                 {
                     switch (UserType)
@@ -279,7 +327,7 @@ namespace WSAUnity
 
                             Messenger.Broadcast(SympleLog.LogDebug, "Receive offer: " + m["offer"]);
 
-                            remotePeer = (JObject)m["from"];
+                            remoteVideoPeer = (JObject)m["from"];
 
                             JObject playParams = new JObject();
                             // don't set requestedWebRtcCameraIndex here, because that's only for when sending video... instead we want to render whatever video we receive
@@ -309,7 +357,7 @@ namespace WSAUnity
                                 }
 
                                 JObject parameters = new JObject();
-                                parameters["to"] = remotePeer;
+                                parameters["to"] = remoteVideoPeer;
                                 parameters["type"] = "message";
                                 parameters["answer"] = sessionDesc;
 
@@ -324,7 +372,7 @@ namespace WSAUnity
                                 candidateObj["sdpMLineIndex"] = cand.SdpMLineIndex;
 
                                 JObject parameters = new JObject();
-                                parameters["to"] = remotePeer;
+                                parameters["to"] = remoteVideoPeer;
                                 parameters["type"] = "message";
                                 parameters["candidate"] = candidateObj;
 
@@ -370,6 +418,12 @@ namespace WSAUnity
 
                     Messenger.Broadcast(SympleLog.LogDebug, "Using Candidate: " + candidateParams);
                     engine.recvRemoteCandidate(candidateParams);
+                } else
+                {
+                    // the content of the message is unrecognized -- so it might be an annotation command.
+
+                    string jsonMessageString = m.ToString(Formatting.None);
+                    Messenger.Broadcast(SympleLog.IncomingMessage, jsonMessageString);
                 }
             });
 
@@ -388,6 +442,27 @@ namespace WSAUnity
             Messenger.Broadcast(SympleLog.LogInfo, "not actually connecting via webrtc because NETFX_CORE not defined (probably this is in the unity editor)");
 #endif
         }
+
+#if NETFX_CORE
+        // sends JSON message to the annotation receiver peer. If there is no current annotation receiver peer, returns false. If message is sent, returns true.
+        public bool sendMessageToAnnotationReceiver(JObject jsonToSend)
+        {
+            if (remoteAnnotationPeer == null)
+            {
+                // no remote annotation receiver peer set up yet, so cannot send message
+                return false;
+            }
+
+            JObject parameters = new JObject();
+            parameters["to"] = remoteAnnotationPeer;
+            parameters["type"] = "message";
+            parameters["message"] = jsonToSend;
+
+            client.send(parameters);
+
+            return true;
+        }
+#endif
 
         private void startPlaybackAndRecording()
         {
@@ -422,7 +497,7 @@ namespace WSAUnity
 
 
                 JObject parameters = new JObject();
-                parameters["to"] = remotePeer;
+                parameters["to"] = remoteVideoPeer;
                 parameters["type"] = "message";
                 parameters["offer"] = sessionDesc;
 
@@ -436,7 +511,7 @@ namespace WSAUnity
                 candidateInit["sdpMLineIndex"] = cand.SdpMLineIndex;
 
                 JObject parameters = new JObject();
-                parameters["to"] = remotePeer;
+                parameters["to"] = remoteVideoPeer;
                 parameters["type"] = "message";
                 parameters["candidate"] = candidateInit;
 

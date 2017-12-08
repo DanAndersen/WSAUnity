@@ -25,5 +25,11 @@ namespace WSAUnity
         public const string CreatedMediaSource = "created_media_source";
 
         public const string DestroyedMediaSource = "destroyed_media_source";
+
+        // used when a message of unknown format is received from another peer. Could be, for example, an annotation command.
+        public const string IncomingMessage = "incoming_message";
+
+        public const string RemoteAnnotationReceiverConnected = "remote_annotation_receiver_connected";
+        public const string RemoteAnnotationReceiverDisconnected = "remote_annotation_receiver_disconnected";
     }
 }
