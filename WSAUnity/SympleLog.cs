@@ -31,5 +31,9 @@ namespace WSAUnity
 
         public const string RemoteAnnotationReceiverConnected = "remote_annotation_receiver_connected";
         public const string RemoteAnnotationReceiverDisconnected = "remote_annotation_receiver_disconnected";
+
+        // triggered whenever some client connects to or disconnects from the signalling server. The username (e.g. "star-trainee") is passed as a parameter.
+        public const string PeerAdded = "peer_added";
+        public const string PeerRemoved = "peer_removed";
     }
 }

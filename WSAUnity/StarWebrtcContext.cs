@@ -229,6 +229,14 @@ namespace WSAUnity
 
                 Messenger.Broadcast(SympleLog.LogInfo, "adding peer: " + peer);
 
+
+                if (peer["user"] != null)
+                {
+                    string peerUsername = (string)peer["user"];
+                    Messenger.Broadcast(SympleLog.PeerAdded, peerUsername);
+                }
+
+
                 if (this.UserType == StarUserType.TRAINEE)
                 {
                     // the TRAINEE user waits for a peer with a specific username, then once it's connected it automatically starts sending video
@@ -268,6 +276,12 @@ namespace WSAUnity
                 JObject peer = (JObject)peerObj;
 
                 Messenger.Broadcast(SympleLog.LogInfo, "Removing peer: " + peer);
+
+                if (peer["user"] != null)
+                {
+                    string peerUsername = (string)peer["user"];
+                    Messenger.Broadcast(SympleLog.PeerRemoved, peerUsername);
+                }
 
                 if (remoteVideoPeer != null && remoteVideoPeer["id"].Equals(peer["id"]))
                 {

@@ -52,7 +52,23 @@ namespace PluginTestApp
 
             Messenger.AddListener<IMediaSource>(SympleLog.CreatedMediaSource, OnCreatedMediaSource);
             Messenger.AddListener(SympleLog.DestroyedMediaSource, OnDestroyedMediaSource);
+
+            Messenger.AddListener<string>(SympleLog.PeerAdded, OnPeerAdded);
+            Messenger.AddListener<string>(SympleLog.PeerRemoved, OnPeerRemoved);
         }
+
+        private void OnPeerAdded(string addedPeerUsername)
+        {
+            string logMessage = "=== OnPeerAdded: " + addedPeerUsername + " ===";
+            Messenger.Broadcast(SympleLog.LogDebug, logMessage);
+        }
+
+        private void OnPeerRemoved(string removedPeerUsername)
+        {
+            string logMessage = "=== OnPeerRemoved: " + removedPeerUsername + " ===";
+            Messenger.Broadcast(SympleLog.LogDebug, logMessage);
+        }
+
 
         private void OnDestroyedMediaSource()
         {
